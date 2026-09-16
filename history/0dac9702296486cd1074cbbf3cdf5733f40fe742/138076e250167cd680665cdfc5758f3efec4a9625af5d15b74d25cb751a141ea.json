@@ -1,0 +1,822 @@
+{
+  "schema": 1,
+  "kind": "baseline_snapshot",
+  "eligible_for_merge": false,
+  "source_commit": "0dac9702296486cd1074cbbf3cdf5733f40fe742",
+  "source_digest": "c5b9573313ea17c6924ded9306028618faefcfbc2b2e50865d9937bc760832eb",
+  "binary_sha256": "ac142626c42cc1f56e679fdd235a0502be81e83094f957cf1cc5ace8e46e9186",
+  "created_at": "2026-09-16T19:11:14.322468+00:00",
+  "workflow_url": "https://github.com/svlocks/poker/actions/runs/35138409195",
+  "samples": 5,
+  "records": 512,
+  "environment": {
+    "system": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+    "machine": "x86_64",
+    "processor": "x86_64",
+    "compiler": "c++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0\nCopyright (C) 2023 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.",
+    "cmake": "cmake version 3.31.6\n\nCMake suite maintained and supported by Kitware (kitware.com/cmake).",
+    "ninja": "1.13.2",
+    "cpu": "{\n   \"lscpu\": [\n      {\n         \"field\": \"Architecture:\",\n         \"data\": \"x86_64\"\n      },{\n         \"field\": \"CPU op-mode(s):\",\n         \"data\": \"32-bit, 64-bit\"\n      },{\n         \"field\": \"Address sizes:\",\n         \"data\": \"48 bits physical, 48 bits virtual\"\n      },{\n         \"field\": \"Byte Order:\",\n         \"data\": \"Little Endian\"\n      },{\n         \"field\": \"CPU(s):\",\n         \"data\": \"4\"\n      },{\n         \"field\": \"On-line CPU(s) list:\",\n         \"data\": \"0-3\"\n      },{\n         \"field\": \"Vendor ID:\",\n         \"data\": \"AuthenticAMD\"\n      },{\n         \"field\": \"Model name:\",\n         \"data\": \"AMD EPYC 7763 64-Core Processor\"\n      },{\n         \"field\": \"CPU family:\",\n         \"data\": \"25\"\n      },{\n         \"field\": \"Model:\",\n         \"data\": \"1\"\n      },{\n         \"field\": \"Thread(s) per core:\",\n         \"data\": \"2\"\n      },{\n         \"field\": \"Core(s) per socket:\",\n         \"data\": \"2\"\n      },{\n         \"field\": \"Socket(s):\",\n         \"data\": \"1\"\n      },{\n         \"field\": \"Stepping:\",\n         \"data\": \"1\"\n      },{\n         \"field\": \"BogoMIPS:\",\n         \"data\": \"4890.86\"\n      },{\n         \"field\": \"Flags:\",\n         \"data\": \"fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm constant_tsc rep_good nopl tsc_reliable nonstop_tsc cpuid extd_apicid aperfmperf tsc_known_freq pni pclmulqdq ssse3 fma cx16 pcid sse4_1 sse4_2 movbe popcnt aes xsave avx f16c rdrand hypervisor lahf_lm cmp_legacy svm cr8_legacy abm sse4a misalignsse 3dnowprefetch osvw topoext vmmcall fsgsbase bmi1 avx2 smep bmi2 erms invpcid rdseed adx smap clflushopt clwb sha_ni xsaveopt xsavec xgetbv1 xsaves user_shstk clzero xsaveerptr rdpru arat npt nrip_save tsc_scale vmcb_clean flushbyasid decodeassists pausefilter pfthreshold v_vmsave_vmload umip vaes vpclmulqdq rdpid fsrm\"\n      },{\n         \"field\": \"Virtualization:\",\n         \"data\": \"AMD-V\"\n      },{\n         \"field\": \"Hypervisor vendor:\",\n         \"data\": \"Microsoft\"\n      },{\n         \"field\": \"Virtualization type:\",\n         \"data\": \"full\"\n      },{\n         \"field\": \"L1d cache:\",\n         \"data\": \"64 KiB (2 instances)\"\n      },{\n         \"field\": \"L1i cache:\",\n         \"data\": \"64 KiB (2 instances)\"\n      },{\n         \"field\": \"L2 cache:\",\n         \"data\": \"1 MiB (2 instances)\"\n      },{\n         \"field\": \"L3 cache:\",\n         \"data\": \"32 MiB (1 instance)\"\n      },{\n         \"field\": \"NUMA node(s):\",\n         \"data\": \"1\"\n      },{\n         \"field\": \"NUMA node0 CPU(s):\",\n         \"data\": \"0-3\"\n      },{\n         \"field\": \"Vulnerability Gather data sampling:\",\n         \"data\": \"Not affected\"\n      },{\n         \"field\": \"Vulnerability Ghostwrite:\",\n         \"data\": \"Not affected\"\n      },{\n         \"field\": \"Vulnerability Indirect target selection:\",\n         \"data\": \"Not affected\"\n      },{\n         \"field\": \"Vulnerability Itlb multihit:\",\n         \"data\": \"Not affected\"\n      },{\n         \"field\": \"Vulnerability L1tf:\",\n         \"data\": \"Not affected\"\n      },{\n         \"field\": \"Vulnerability Mds:\",\n         \"data\": \"Not affected\"\n      },{\n         \"field\": \"Vulnerability Meltdown:\",\n         \"data\": \"Not affected\"\n      },{\n         \"field\": \"Vulnerability Mmio stale data:\",\n         \"data\": \"Not affected\"\n      },{\n         \"field\": \"Vulnerability Old microcode:\",\n         \"data\": \"Not affected\"\n      },{\n         \"field\": \"Vulnerability Reg file data sampling:\",\n         \"data\": \"Not affected\"\n      },{\n         \"field\": \"Vulnerability Retbleed:\",\n         \"data\": \"Not affected\"\n      },{\n         \"field\": \"Vulnerability Spec rstack overflow:\",\n         \"data\": \"Vulnerable: Safe RET, no microcode\"\n      },{\n         \"field\": \"Vulnerability Spec store bypass:\",\n         \"data\": \"Vulnerable\"\n      },{\n         \"field\": \"Vulnerability Spectre v1:\",\n         \"data\": \"Mitigation; usercopy/swapgs barriers and __user pointer sanitization\"\n      },{\n         \"field\": \"Vulnerability Spectre v2:\",\n         \"data\": \"Mitigation; Retpolines; STIBP disabled; RSB filling; PBRSB-eIBRS Not affected; BHI Not affected\"\n      },{\n         \"field\": \"Vulnerability Srbds:\",\n         \"data\": \"Not affected\"\n      },{\n         \"field\": \"Vulnerability Tsa:\",\n         \"data\": \"Vulnerable: No microcode\"\n      },{\n         \"field\": \"Vulnerability Tsx async abort:\",\n         \"data\": \"Not affected\"\n      },{\n         \"field\": \"Vulnerability Vmscape:\",\n         \"data\": \"Not affected\"\n      }\n   ]\n}",
+    "build_profile": {
+      "CMAKE_BUILD_TYPE": "Release",
+      "POKER_NATIVE": false,
+      "POKER_LTO": false,
+      "POKER_SANITIZE": false
+    }
+  },
+  "policy_sha256": "808971df247e5a9b13d3e1fc8caa43ca6793fa74e9cbac54494c3e14dc0e0ec5",
+  "profiles": {
+    "batch/high/5/1": {
+      "median_seconds_per_item": 2.6964843913290796e-08,
+      "min_seconds_per_item": 2.4324218861337954e-08,
+      "max_seconds_per_item": 3.3929687504041794e-08
+    },
+    "batch/high/5/1024": {
+      "median_seconds_per_item": 6.985351630461879e-09,
+      "min_seconds_per_item": 6.055664081294765e-09,
+      "max_seconds_per_item": 8.305664045415995e-09
+    },
+    "batch/high/5/128": {
+      "median_seconds_per_item": 8.160156106384875e-09,
+      "min_seconds_per_item": 7.708984561816123e-09,
+      "max_seconds_per_item": 1.0878906220312956e-08
+    },
+    "batch/high/5/31": {
+      "median_seconds_per_item": 9.696394612809332e-09,
+      "min_seconds_per_item": 8.155597764066468e-09,
+      "max_seconds_per_item": 1.2679316979859235e-08
+    },
+    "batch/high/5/8": {
+      "median_seconds_per_item": 1.4458984454179815e-08,
+      "min_seconds_per_item": 1.113476555403281e-08,
+      "max_seconds_per_item": 1.6515624867707857e-08
+    },
+    "batch/high/6/1": {
+      "median_seconds_per_item": 4.9253906286850224e-08,
+      "min_seconds_per_item": 4.676757825450295e-08,
+      "max_seconds_per_item": 5.7255859386984305e-08
+    },
+    "batch/high/6/1024": {
+      "median_seconds_per_item": 1.4451171814755527e-08,
+      "min_seconds_per_item": 1.1877929639858564e-08,
+      "max_seconds_per_item": 1.7229492166315197e-08
+    },
+    "batch/high/6/128": {
+      "median_seconds_per_item": 1.9236328085980858e-08,
+      "min_seconds_per_item": 1.4380859170159967e-08,
+      "max_seconds_per_item": 2.440039059692367e-08
+    },
+    "batch/high/6/31": {
+      "median_seconds_per_item": 2.2451612765428503e-08,
+      "min_seconds_per_item": 1.6766603427590755e-08,
+      "max_seconds_per_item": 2.7546489476545475e-08
+    },
+    "batch/high/6/8": {
+      "median_seconds_per_item": 2.647460939364521e-08,
+      "min_seconds_per_item": 2.4830077993698296e-08,
+      "max_seconds_per_item": 3.3402343779798116e-08
+    },
+    "batch/high/7/1": {
+      "median_seconds_per_item": 3.42832031652307e-08,
+      "min_seconds_per_item": 2.9410156088260923e-08,
+      "max_seconds_per_item": 6.627539050896303e-08
+    },
+    "batch/high/7/1024": {
+      "median_seconds_per_item": 1.8491210895810184e-08,
+      "min_seconds_per_item": 1.6985351569687168e-08,
+      "max_seconds_per_item": 2.726757808435565e-08
+    },
+    "batch/high/7/128": {
+      "median_seconds_per_item": 2.1916015668921318e-08,
+      "min_seconds_per_item": 1.9156249919660695e-08,
+      "max_seconds_per_item": 3.346093735423494e-08
+    },
+    "batch/high/7/31": {
+      "median_seconds_per_item": 2.4466793076474856e-08,
+      "min_seconds_per_item": 2.1140417595278754e-08,
+      "max_seconds_per_item": 3.214800759396238e-08
+    },
+    "batch/high/7/8": {
+      "median_seconds_per_item": 2.395117171261063e-08,
+      "min_seconds_per_item": 2.0839843628550625e-08,
+      "max_seconds_per_item": 3.97617188063748e-08
+    },
+    "batch/high/9/1": {
+      "median_seconds_per_item": 6.527734375261218e-08,
+      "min_seconds_per_item": 6.320312495589064e-08,
+      "max_seconds_per_item": 6.880078129434253e-08
+    },
+    "batch/high/9/1024": {
+      "median_seconds_per_item": 4.877246095880139e-08,
+      "min_seconds_per_item": 4.586718749255425e-08,
+      "max_seconds_per_item": 5.419238280346406e-08
+    },
+    "batch/high/9/128": {
+      "median_seconds_per_item": 4.895898442214275e-08,
+      "min_seconds_per_item": 4.713867207684075e-08,
+      "max_seconds_per_item": 5.1150390589782546e-08
+    },
+    "batch/high/9/31": {
+      "median_seconds_per_item": 4.895256150007083e-08,
+      "min_seconds_per_item": 4.655787467805115e-08,
+      "max_seconds_per_item": 5.1958254240521175e-08
+    },
+    "batch/high/9/8": {
+      "median_seconds_per_item": 5.314648432452885e-08,
+      "min_seconds_per_item": 5.203125019725974e-08,
+      "max_seconds_per_item": 5.480859366358005e-08
+    },
+    "batch/omaha/4/3/1": {
+      "median_seconds_per_item": 4.22871093697097e-08,
+      "min_seconds_per_item": 4.077929682821946e-08,
+      "max_seconds_per_item": 5.3439453084891404e-08
+    },
+    "batch/omaha/4/3/1024": {
+      "median_seconds_per_item": 3.108300783427609e-08,
+      "min_seconds_per_item": 3.015429694830374e-08,
+      "max_seconds_per_item": 3.1376953146811104e-08
+    },
+    "batch/omaha/4/3/64": {
+      "median_seconds_per_item": 3.594726560862682e-08,
+      "min_seconds_per_item": 3.4499999967962935e-08,
+      "max_seconds_per_item": 5.7253906282639384e-08
+    },
+    "batch/omaha/4/3/8": {
+      "median_seconds_per_item": 3.7218750081891017e-08,
+      "min_seconds_per_item": 3.590624997329428e-08,
+      "max_seconds_per_item": 4.316796875514228e-08
+    },
+    "batch/omaha/4/4/1": {
+      "median_seconds_per_item": 6.361523441356098e-08,
+      "min_seconds_per_item": 6.099218752275704e-08,
+      "max_seconds_per_item": 6.412499997665577e-08
+    },
+    "batch/omaha/4/4/1024": {
+      "median_seconds_per_item": 5.206054687345585e-08,
+      "min_seconds_per_item": 5.0934570339222773e-08,
+      "max_seconds_per_item": 5.615917963996964e-08
+    },
+    "batch/omaha/4/4/64": {
+      "median_seconds_per_item": 5.578906248082661e-08,
+      "min_seconds_per_item": 5.383007795067841e-08,
+      "max_seconds_per_item": 8.672460949377125e-08
+    },
+    "batch/omaha/4/4/8": {
+      "median_seconds_per_item": 5.974023431498665e-08,
+      "min_seconds_per_item": 5.6726562558395706e-08,
+      "max_seconds_per_item": 7.541406255029415e-08
+    },
+    "batch/omaha/4/5/1": {
+      "median_seconds_per_item": 9.762500008392294e-08,
+      "min_seconds_per_item": 9.63124999753262e-08,
+      "max_seconds_per_item": 1.014199217941325e-07
+    },
+    "batch/omaha/4/5/1024": {
+      "median_seconds_per_item": 8.546289065325396e-08,
+      "min_seconds_per_item": 8.503222659328458e-08,
+      "max_seconds_per_item": 9.485546881293772e-08
+    },
+    "batch/omaha/4/5/64": {
+      "median_seconds_per_item": 9.087500019155925e-08,
+      "min_seconds_per_item": 8.942578122450584e-08,
+      "max_seconds_per_item": 1.0928710936219944e-07
+    },
+    "batch/omaha/4/5/8": {
+      "median_seconds_per_item": 9.249804699962283e-08,
+      "min_seconds_per_item": 9.151953128672119e-08,
+      "max_seconds_per_item": 9.541210932439981e-08
+    },
+    "batch/omaha/5/3/1": {
+      "median_seconds_per_item": 5.025195304320107e-08,
+      "min_seconds_per_item": 4.964453115263723e-08,
+      "max_seconds_per_item": 5.185351570347052e-08
+    },
+    "batch/omaha/5/3/1024": {
+      "median_seconds_per_item": 3.9047851618789764e-08,
+      "min_seconds_per_item": 3.8412109382157666e-08,
+      "max_seconds_per_item": 4.1111328119569635e-08
+    },
+    "batch/omaha/5/3/64": {
+      "median_seconds_per_item": 4.474999992787332e-08,
+      "min_seconds_per_item": 4.2091796936816195e-08,
+      "max_seconds_per_item": 4.594531244350719e-08
+    },
+    "batch/omaha/5/3/8": {
+      "median_seconds_per_item": 4.625781246936356e-08,
+      "min_seconds_per_item": 4.5103515589062226e-08,
+      "max_seconds_per_item": 5.887890619504788e-08
+    },
+    "batch/omaha/5/4/1": {
+      "median_seconds_per_item": 7.606054697184561e-08,
+      "min_seconds_per_item": 7.562890624868146e-08,
+      "max_seconds_per_item": 7.936718748879912e-08
+    },
+    "batch/omaha/5/4/1024": {
+      "median_seconds_per_item": 6.636425775585764e-08,
+      "min_seconds_per_item": 6.511230465910955e-08,
+      "max_seconds_per_item": 6.791992190890994e-08
+    },
+    "batch/omaha/5/4/64": {
+      "median_seconds_per_item": 6.974023447625655e-08,
+      "min_seconds_per_item": 6.788085937792232e-08,
+      "max_seconds_per_item": 7.291015613475338e-08
+    },
+    "batch/omaha/5/4/8": {
+      "median_seconds_per_item": 7.304687521525466e-08,
+      "min_seconds_per_item": 7.152148429057092e-08,
+      "max_seconds_per_item": 7.506249999345016e-08
+    },
+    "batch/omaha/5/5/1": {
+      "median_seconds_per_item": 1.2542968752526917e-07,
+      "min_seconds_per_item": 1.2450976560884897e-07,
+      "max_seconds_per_item": 1.2756249989642754e-07
+    },
+    "batch/omaha/5/5/1024": {
+      "median_seconds_per_item": 1.1317089843032592e-07,
+      "min_seconds_per_item": 1.116650391042029e-07,
+      "max_seconds_per_item": 1.3338378901384118e-07
+    },
+    "batch/omaha/5/5/64": {
+      "median_seconds_per_item": 1.1590039061815106e-07,
+      "min_seconds_per_item": 1.1409960931629827e-07,
+      "max_seconds_per_item": 1.1987304704419444e-07
+    },
+    "batch/omaha/5/5/8": {
+      "median_seconds_per_item": 1.198339842911622e-07,
+      "min_seconds_per_item": 1.1742578109874559e-07,
+      "max_seconds_per_item": 1.2423632811398022e-07
+    },
+    "batch/omaha/6/3/1": {
+      "median_seconds_per_item": 6.067968749690067e-08,
+      "min_seconds_per_item": 6.026757803923033e-08,
+      "max_seconds_per_item": 8.398437501000444e-08
+    },
+    "batch/omaha/6/3/1024": {
+      "median_seconds_per_item": 4.936035158387142e-08,
+      "min_seconds_per_item": 4.8519531281598915e-08,
+      "max_seconds_per_item": 5.0034179688296376e-08
+    },
+    "batch/omaha/6/3/64": {
+      "median_seconds_per_item": 5.302929673156598e-08,
+      "min_seconds_per_item": 5.299023442262296e-08,
+      "max_seconds_per_item": 5.488867182990021e-08
+    },
+    "batch/omaha/6/3/8": {
+      "median_seconds_per_item": 5.551367188161294e-08,
+      "min_seconds_per_item": 5.4203124877361126e-08,
+      "max_seconds_per_item": 5.74316407764286e-08
+    },
+    "batch/omaha/6/4/1": {
+      "median_seconds_per_item": 9.725390626158514e-08,
+      "min_seconds_per_item": 9.429882807943102e-08,
+      "max_seconds_per_item": 9.9933593622481e-08
+    },
+    "batch/omaha/6/4/1024": {
+      "median_seconds_per_item": 8.573632814812271e-08,
+      "min_seconds_per_item": 8.299707032755066e-08,
+      "max_seconds_per_item": 8.619726565850527e-08
+    },
+    "batch/omaha/6/4/64": {
+      "median_seconds_per_item": 8.86230469010485e-08,
+      "min_seconds_per_item": 8.674609364156538e-08,
+      "max_seconds_per_item": 1.38794921999974e-07
+    },
+    "batch/omaha/6/4/8": {
+      "median_seconds_per_item": 9.198828143652804e-08,
+      "min_seconds_per_item": 9.101171860592672e-08,
+      "max_seconds_per_item": 9.441601567239388e-08
+    },
+    "batch/omaha/6/5/1": {
+      "median_seconds_per_item": 1.5628710947623858e-07,
+      "min_seconds_per_item": 1.5585937518380888e-07,
+      "max_seconds_per_item": 1.6317578133140387e-07
+    },
+    "batch/omaha/6/5/1024": {
+      "median_seconds_per_item": 1.4758105471024408e-07,
+      "min_seconds_per_item": 1.4639648437952957e-07,
+      "max_seconds_per_item": 1.54283203102068e-07
+    },
+    "batch/omaha/6/5/64": {
+      "median_seconds_per_item": 1.4699218731095698e-07,
+      "min_seconds_per_item": 1.4599609365895105e-07,
+      "max_seconds_per_item": 1.6552343762299415e-07
+    },
+    "batch/omaha/6/5/8": {
+      "median_seconds_per_item": 1.5090820326690846e-07,
+      "min_seconds_per_item": 1.5039843748176907e-07,
+      "max_seconds_per_item": 1.71453124808707e-07
+    },
+    "native/high/5": {
+      "median_seconds_per_item": 7.265624990537844e-08,
+      "min_seconds_per_item": 6.124804685647689e-08,
+      "max_seconds_per_item": 8.279101559871549e-08
+    },
+    "native/high/6": {
+      "median_seconds_per_item": 1.082890626058486e-07,
+      "min_seconds_per_item": 9.983593751705655e-08,
+      "max_seconds_per_item": 1.1225976548345785e-07
+    },
+    "native/high/7": {
+      "median_seconds_per_item": 7.199023444037778e-08,
+      "min_seconds_per_item": 5.788281254304196e-08,
+      "max_seconds_per_item": 1.4214062504791514e-07
+    },
+    "parallel/high/7/1": {
+      "median_seconds_per_item": 1.2924609382736207e-07,
+      "min_seconds_per_item": 1.0895507807084927e-07,
+      "max_seconds_per_item": 1.544492187477431e-07
+    },
+    "parallel/high/7/2": {
+      "median_seconds_per_item": 6.905468752371746e-08,
+      "min_seconds_per_item": 5.369531241861126e-08,
+      "max_seconds_per_item": 1.0835156238897527e-07
+    },
+    "parallel/high/7/4": {
+      "median_seconds_per_item": 7.363476561828008e-08,
+      "min_seconds_per_item": 7.023046877385752e-08,
+      "max_seconds_per_item": 9.527539046594313e-08
+    },
+    "parallel/omaha/4/5/1": {
+      "median_seconds_per_item": 2.1522656257211284e-07,
+      "min_seconds_per_item": 1.6221874998834096e-07,
+      "max_seconds_per_item": 2.2620507800219516e-07
+    },
+    "parallel/omaha/4/5/2": {
+      "median_seconds_per_item": 1.3607617188604593e-07,
+      "min_seconds_per_item": 1.3376562502109834e-07,
+      "max_seconds_per_item": 1.37503906261216e-07
+    },
+    "parallel/omaha/4/5/4": {
+      "median_seconds_per_item": 1.5881054693522856e-07,
+      "min_seconds_per_item": 1.1298437496698456e-07,
+      "max_seconds_per_item": 1.6571875005588765e-07
+    },
+    "prepared/high/2/1": {
+      "median_seconds_per_item": 9.355273444811019e-08,
+      "min_seconds_per_item": 7.938671875429293e-08,
+      "max_seconds_per_item": 1.057832033080075e-07
+    },
+    "prepared/high/2/64": {
+      "median_seconds_per_item": 3.717968732885879e-08,
+      "min_seconds_per_item": 3.1542968903508495e-08,
+      "max_seconds_per_item": 4.120898444703869e-08
+    },
+    "prepared/high/2/8": {
+      "median_seconds_per_item": 4.6513672025128017e-08,
+      "min_seconds_per_item": 4.0369140696938643e-08,
+      "max_seconds_per_item": 4.893945315664894e-08
+    },
+    "prepared/high/5/1": {
+      "median_seconds_per_item": 5.602343744470773e-08,
+      "min_seconds_per_item": 4.0542968759993414e-08,
+      "max_seconds_per_item": 6.985742206921941e-08
+    },
+    "prepared/high/5/64": {
+      "median_seconds_per_item": 1.929296877811737e-08,
+      "min_seconds_per_item": 1.7298828147715994e-08,
+      "max_seconds_per_item": 2.0898437425032057e-08
+    },
+    "prepared/high/5/8": {
+      "median_seconds_per_item": 2.92128905510225e-08,
+      "min_seconds_per_item": 2.1623046908558763e-08,
+      "max_seconds_per_item": 3.7316406187315465e-08
+    },
+    "prepared/high/6/1": {
+      "median_seconds_per_item": 4.326562486056673e-08,
+      "min_seconds_per_item": 3.641601575843367e-08,
+      "max_seconds_per_item": 4.6787109297952156e-08
+    },
+    "prepared/high/6/64": {
+      "median_seconds_per_item": 1.0859374954819145e-08,
+      "min_seconds_per_item": 1.0154296958830855e-08,
+      "max_seconds_per_item": 1.430468743457425e-08
+    },
+    "prepared/high/6/8": {
+      "median_seconds_per_item": 2.1464843680263357e-08,
+      "min_seconds_per_item": 1.7277343777877263e-08,
+      "max_seconds_per_item": 2.534179688318261e-08
+    },
+    "prepared/omaha/4/1": {
+      "median_seconds_per_item": 1.110664062942135e-07,
+      "min_seconds_per_item": 1.0498046876250555e-07,
+      "max_seconds_per_item": 1.2224023437923393e-07
+    },
+    "prepared/omaha/4/128": {
+      "median_seconds_per_item": 6.668749996663337e-08,
+      "min_seconds_per_item": 6.521874995613075e-08,
+      "max_seconds_per_item": 7.101171872747614e-08
+    },
+    "prepared/omaha/4/16": {
+      "median_seconds_per_item": 7.504296872795635e-08,
+      "min_seconds_per_item": 7.337890628456023e-08,
+      "max_seconds_per_item": 9.136132828047039e-08
+    },
+    "prepared/omaha/5/1": {
+      "median_seconds_per_item": 1.3141796872950806e-07,
+      "min_seconds_per_item": 1.3081054683894422e-07,
+      "max_seconds_per_item": 1.3445117197363743e-07
+    },
+    "prepared/omaha/5/128": {
+      "median_seconds_per_item": 8.558984387896373e-08,
+      "min_seconds_per_item": 8.429882814020573e-08,
+      "max_seconds_per_item": 9.286914059991602e-08
+    },
+    "prepared/omaha/5/16": {
+      "median_seconds_per_item": 9.734960948470928e-08,
+      "min_seconds_per_item": 9.605859374595127e-08,
+      "max_seconds_per_item": 1.0118554683025138e-07
+    },
+    "prepared/omaha/6/1": {
+      "median_seconds_per_item": 1.642929687850625e-07,
+      "min_seconds_per_item": 1.6180664053067062e-07,
+      "max_seconds_per_item": 1.7006445318656915e-07
+    },
+    "prepared/omaha/6/128": {
+      "median_seconds_per_item": 1.0948046869074803e-07,
+      "min_seconds_per_item": 1.0774218761611111e-07,
+      "max_seconds_per_item": 1.139628904578416e-07
+    },
+    "prepared/omaha/6/16": {
+      "median_seconds_per_item": 1.2004882821159413e-07,
+      "min_seconds_per_item": 1.1811328115562959e-07,
+      "max_seconds_per_item": 1.428066407349604e-07
+    },
+    "scalar/high/5": {
+      "median_seconds_per_item": 1.4041796880803759e-07,
+      "min_seconds_per_item": 1.3012695321279466e-07,
+      "max_seconds_per_item": 1.4603515618993868e-07
+    },
+    "scalar/high/6": {
+      "median_seconds_per_item": 1.736074217717487e-07,
+      "min_seconds_per_item": 1.646835938728941e-07,
+      "max_seconds_per_item": 1.8550390623595092e-07
+    },
+    "scalar/high/7": {
+      "median_seconds_per_item": 8.400390605345365e-08,
+      "min_seconds_per_item": 7.44160155718987e-08,
+      "max_seconds_per_item": 2.0706835934802825e-07
+    },
+    "scalar/omaha/4/3": {
+      "median_seconds_per_item": 6.680468755959623e-08,
+      "min_seconds_per_item": 4.897851568763656e-08,
+      "max_seconds_per_item": 1.4251171887025293e-07
+    },
+    "scalar/omaha/4/4": {
+      "median_seconds_per_item": 6.993554690915005e-08,
+      "min_seconds_per_item": 6.786132811242851e-08,
+      "max_seconds_per_item": 8.905273429782312e-08
+    },
+    "scalar/omaha/4/5": {
+      "median_seconds_per_item": 9.965820302326733e-08,
+      "min_seconds_per_item": 9.746679685562754e-08,
+      "max_seconds_per_item": 1.0363085944931072e-07
+    },
+    "scalar/omaha/5/3": {
+      "median_seconds_per_item": 5.81933594645534e-08,
+      "min_seconds_per_item": 5.612109355013218e-08,
+      "max_seconds_per_item": 7.999218754051185e-08
+    },
+    "scalar/omaha/5/4": {
+      "median_seconds_per_item": 8.478710933346179e-08,
+      "min_seconds_per_item": 8.373046878062951e-08,
+      "max_seconds_per_item": 8.555078134797611e-08
+    },
+    "scalar/omaha/5/5": {
+      "median_seconds_per_item": 1.2926562509285588e-07,
+      "min_seconds_per_item": 1.256445314457011e-07,
+      "max_seconds_per_item": 1.528242188353346e-07
+    },
+    "scalar/omaha/6/3": {
+      "median_seconds_per_item": 6.756640624772103e-08,
+      "min_seconds_per_item": 6.54746092898506e-08,
+      "max_seconds_per_item": 6.870312496687347e-08
+    },
+    "scalar/omaha/6/4": {
+      "median_seconds_per_item": 1.0443359377276806e-07,
+      "min_seconds_per_item": 1.0370898451128596e-07,
+      "max_seconds_per_item": 1.2232031232350948e-07
+    },
+    "scalar/omaha/6/5": {
+      "median_seconds_per_item": 1.6198437480241523e-07,
+      "min_seconds_per_item": 1.5910546879993603e-07,
+      "max_seconds_per_item": 1.7006445318656915e-07
+    },
+    "shared/holdem/3/2": {
+      "median_seconds_per_item": 4.893945293460433e-08,
+      "min_seconds_per_item": 4.287304689043481e-08,
+      "max_seconds_per_item": 6.404492181033561e-08
+    },
+    "shared/holdem/3/6": {
+      "median_seconds_per_item": 2.394186042185411e-08,
+      "min_seconds_per_item": 1.9494186110319406e-08,
+      "max_seconds_per_item": 2.6288759723796857e-08
+    },
+    "shared/holdem/3/9": {
+      "median_seconds_per_item": 1.7615984484862982e-08,
+      "min_seconds_per_item": 1.2986354617608804e-08,
+      "max_seconds_per_item": 1.8395711534088577e-08
+    },
+    "shared/holdem/4/2": {
+      "median_seconds_per_item": 6.645312500275224e-08,
+      "min_seconds_per_item": 6.467187496639326e-08,
+      "max_seconds_per_item": 8.267382800575263e-08
+    },
+    "shared/holdem/4/6": {
+      "median_seconds_per_item": 3.263953495421842e-08,
+      "min_seconds_per_item": 3.021124028293357e-08,
+      "max_seconds_per_item": 3.4482558107775946e-08
+    },
+    "shared/holdem/4/9": {
+      "median_seconds_per_item": 2.544639391467358e-08,
+      "min_seconds_per_item": 2.1775828426556648e-08,
+      "max_seconds_per_item": 2.6286549839577715e-08
+    },
+    "shared/holdem/5/2": {
+      "median_seconds_per_item": 6.91132813201989e-08,
+      "min_seconds_per_item": 6.441796873701833e-08,
+      "max_seconds_per_item": 7.279296876383512e-08
+    },
+    "shared/holdem/5/6": {
+      "median_seconds_per_item": 4.5104651163039883e-08,
+      "min_seconds_per_item": 4.1453488428269054e-08,
+      "max_seconds_per_item": 6.098643425925835e-08
+    },
+    "shared/holdem/5/9": {
+      "median_seconds_per_item": 3.6576998168422175e-08,
+      "min_seconds_per_item": 3.134502928473008e-08,
+      "max_seconds_per_item": 3.905847933581977e-08
+    },
+    "shared/omaha/4/3/2": {
+      "median_seconds_per_item": 3.177734364534501e-08,
+      "min_seconds_per_item": 3.042773433215018e-08,
+      "max_seconds_per_item": 3.2404296801402666e-08
+    },
+    "shared/omaha/4/3/6": {
+      "median_seconds_per_item": 2.7375969205584895e-08,
+      "min_seconds_per_item": 2.4717054174281882e-08,
+      "max_seconds_per_item": 2.7939922458329444e-08
+    },
+    "shared/omaha/4/4/2": {
+      "median_seconds_per_item": 5.066210939652649e-08,
+      "min_seconds_per_item": 4.966210931378612e-08,
+      "max_seconds_per_item": 5.2265624939096256e-08
+    },
+    "shared/omaha/4/4/6": {
+      "median_seconds_per_item": 4.1007751860888675e-08,
+      "min_seconds_per_item": 3.980232547341314e-08,
+      "max_seconds_per_item": 4.275387615341815e-08
+    },
+    "shared/omaha/4/5/2": {
+      "median_seconds_per_item": 7.960156267472485e-08,
+      "min_seconds_per_item": 7.846679683787272e-08,
+      "max_seconds_per_item": 9.441601545034928e-08
+    },
+    "shared/omaha/4/5/6": {
+      "median_seconds_per_item": 6.735465116569037e-08,
+      "min_seconds_per_item": 6.547093032746179e-08,
+      "max_seconds_per_item": 8.47906976947667e-08
+    },
+    "shared/omaha/5/3/2": {
+      "median_seconds_per_item": 4.101367179210058e-08,
+      "min_seconds_per_item": 4.06621094573012e-08,
+      "max_seconds_per_item": 4.291406252576735e-08
+    },
+    "shared/omaha/5/3/6": {
+      "median_seconds_per_item": 3.753100764880901e-08,
+      "min_seconds_per_item": 3.636627894600453e-08,
+      "max_seconds_per_item": 3.997674421642764e-08
+    },
+    "shared/omaha/5/4/2": {
+      "median_seconds_per_item": 6.791992190890994e-08,
+      "min_seconds_per_item": 6.770507821052263e-08,
+      "max_seconds_per_item": 6.975976551970575e-08
+    },
+    "shared/omaha/5/4/6": {
+      "median_seconds_per_item": 5.8267441903272686e-08,
+      "min_seconds_per_item": 5.551162779061828e-08,
+      "max_seconds_per_item": 6.108333334060974e-08
+    },
+    "shared/omaha/5/5/2": {
+      "median_seconds_per_item": 1.0725195331851013e-07,
+      "min_seconds_per_item": 1.0507812486793e-07,
+      "max_seconds_per_item": 1.1257421883570375e-07
+    },
+    "shared/omaha/5/5/6": {
+      "median_seconds_per_item": 9.22848835833333e-08,
+      "min_seconds_per_item": 9.110077524051721e-08,
+      "max_seconds_per_item": 9.754651158828899e-08
+    },
+    "shared/omaha/6/3/2": {
+      "median_seconds_per_item": 5.3871093808055555e-08,
+      "min_seconds_per_item": 5.3634765517784906e-08,
+      "max_seconds_per_item": 6.451562506448738e-08
+    },
+    "shared/omaha/6/3/6": {
+      "median_seconds_per_item": 5.118023264109324e-08,
+      "min_seconds_per_item": 4.605426343815882e-08,
+      "max_seconds_per_item": 5.521899236223962e-08
+    },
+    "shared/omaha/6/4/2": {
+      "median_seconds_per_item": 8.79179686830156e-08,
+      "min_seconds_per_item": 8.582421884284486e-08,
+      "max_seconds_per_item": 1.079550782101535e-07
+    },
+    "shared/omaha/6/4/6": {
+      "median_seconds_per_item": 8.257558148716623e-08,
+      "min_seconds_per_item": 7.675387593714498e-08,
+      "max_seconds_per_item": 8.341279074860115e-08
+    },
+    "shared/omaha/6/5/2": {
+      "median_seconds_per_item": 1.3945898436062976e-07,
+      "min_seconds_per_item": 1.3576171875584464e-07,
+      "max_seconds_per_item": 1.431582030697598e-07
+    },
+    "shared/omaha/6/5/6": {
+      "median_seconds_per_item": 1.236434108930609e-07,
+      "min_seconds_per_item": 1.2234302338823515e-07,
+      "max_seconds_per_item": 1.2455426366783327e-07
+    },
+    "simulation/holdem/2": {
+      "median_seconds_per_item": 2.0472851569586226e-07,
+      "min_seconds_per_item": 1.5788281249040637e-07,
+      "max_seconds_per_item": 2.2151855472163365e-07
+    },
+    "simulation/holdem/6": {
+      "median_seconds_per_item": 9.050781250389643e-08,
+      "min_seconds_per_item": 7.722428385648074e-08,
+      "max_seconds_per_item": 1.0659602867058027e-07
+    },
+    "simulation/omaha/2": {
+      "median_seconds_per_item": 2.1413085937727064e-07,
+      "min_seconds_per_item": 2.1097070312947608e-07,
+      "max_seconds_per_item": 2.1725195320509985e-07
+    },
+    "simulation/omaha/6": {
+      "median_seconds_per_item": 1.3990364581643414e-07,
+      "min_seconds_per_item": 1.367597656232178e-07,
+      "max_seconds_per_item": 1.427477213470733e-07
+    },
+    "startup/initialize": {
+      "median_seconds_per_item": 2.8e-07,
+      "min_seconds_per_item": 2.01e-07,
+      "max_seconds_per_item": 3.11e-07
+    },
+    "state/clone/high": {
+      "median_seconds_per_item": 1.7042968591951535e-08,
+      "min_seconds_per_item": 1.649609382425865e-08,
+      "max_seconds_per_item": 1.7296875043371074e-08
+    },
+    "state/clone/omaha": {
+      "median_seconds_per_item": 1.717968745040821e-08,
+      "min_seconds_per_item": 1.6320312434814355e-08,
+      "max_seconds_per_item": 1.8531249867947963e-08
+    },
+    "state/extend/high": {
+      "median_seconds_per_item": 2.5691406335681677e-08,
+      "min_seconds_per_item": 2.5496093902788175e-08,
+      "max_seconds_per_item": 2.6044921996870585e-08
+    },
+    "state/extend/omaha": {
+      "median_seconds_per_item": 2.7511718903028285e-08,
+      "min_seconds_per_item": 2.7003906222233812e-08,
+      "max_seconds_per_item": 2.862695303029739e-08
+    },
+    "total/high/2/1": {
+      "median_seconds_per_item": 1.0005078121544386e-07,
+      "min_seconds_per_item": 9.240039067215378e-08,
+      "max_seconds_per_item": 1.3034179691118197e-07
+    },
+    "total/high/2/64": {
+      "median_seconds_per_item": 3.535937498355679e-08,
+      "min_seconds_per_item": 2.849023439388532e-08,
+      "max_seconds_per_item": 3.7296874921821654e-08
+    },
+    "total/high/2/8": {
+      "median_seconds_per_item": 4.68652343599274e-08,
+      "min_seconds_per_item": 3.760937494767802e-08,
+      "max_seconds_per_item": 6.326171875237208e-08
+    },
+    "total/high/5/1": {
+      "median_seconds_per_item": 6.827148446575393e-08,
+      "min_seconds_per_item": 5.811523440257816e-08,
+      "max_seconds_per_item": 6.989648437816243e-08
+    },
+    "total/high/5/64": {
+      "median_seconds_per_item": 1.9587890642824846e-08,
+      "min_seconds_per_item": 1.518554704205144e-08,
+      "max_seconds_per_item": 2.113281238891318e-08
+    },
+    "total/high/5/8": {
+      "median_seconds_per_item": 2.8197265633522764e-08,
+      "min_seconds_per_item": 2.312890634570408e-08,
+      "max_seconds_per_item": 4.120898444703869e-08
+    },
+    "total/high/6/1": {
+      "median_seconds_per_item": 6.343945302411669e-08,
+      "min_seconds_per_item": 5.187500007330925e-08,
+      "max_seconds_per_item": 8.216601554700276e-08
+    },
+    "total/high/6/64": {
+      "median_seconds_per_item": 1.1818359402226974e-08,
+      "min_seconds_per_item": 9.785156240837978e-09,
+      "max_seconds_per_item": 1.361914070407977e-08
+    },
+    "total/high/6/8": {
+      "median_seconds_per_item": 2.1505859537640504e-08,
+      "min_seconds_per_item": 1.7669921748009187e-08,
+      "max_seconds_per_item": 2.9312499982836474e-08
+    },
+    "total/omaha/4/1": {
+      "median_seconds_per_item": 1.2043945307738113e-07,
+      "min_seconds_per_item": 1.1916796860411695e-07,
+      "max_seconds_per_item": 1.6814843739609842e-07
+    },
+    "total/omaha/4/128": {
+      "median_seconds_per_item": 6.719531264742784e-08,
+      "min_seconds_per_item": 6.384960937744211e-08,
+      "max_seconds_per_item": 7.412304681153614e-08
+    },
+    "total/omaha/4/16": {
+      "median_seconds_per_item": 7.760546871793395e-08,
+      "min_seconds_per_item": 7.4240234404499e-08,
+      "max_seconds_per_item": 8.490625003076957e-08
+    },
+    "total/omaha/5/1": {
+      "median_seconds_per_item": 1.6474023456503062e-07,
+      "min_seconds_per_item": 1.5039843748176907e-07,
+      "max_seconds_per_item": 1.9419140628862408e-07
+    },
+    "total/omaha/5/128": {
+      "median_seconds_per_item": 9.406250001120497e-08,
+      "min_seconds_per_item": 8.535351558869309e-08,
+      "max_seconds_per_item": 1.0625390611807008e-07
+    },
+    "total/omaha/5/16": {
+      "median_seconds_per_item": 1.0138085948518949e-07,
+      "min_seconds_per_item": 9.64511719381278e-08,
+      "max_seconds_per_item": 1.0862109367515417e-07
+    },
+    "total/omaha/6/1": {
+      "median_seconds_per_item": 1.80005859329313e-07,
+      "min_seconds_per_item": 1.7969140619911173e-07,
+      "max_seconds_per_item": 1.8356445297129653e-07
+    },
+    "total/omaha/6/128": {
+      "median_seconds_per_item": 1.103417968106868e-07,
+      "min_seconds_per_item": 1.086796874716356e-07,
+      "max_seconds_per_item": 1.1644726560788855e-07
+    },
+    "total/omaha/6/16": {
+      "median_seconds_per_item": 1.2298437512825444e-07,
+      "min_seconds_per_item": 1.2194726561887137e-07,
+      "max_seconds_per_item": 1.3609570315153974e-07
+    }
+  },
+  "runs": [
+    {
+      "seed": 13712563013170447058,
+      "raw_file": "raw-00.json",
+      "sha256": "3c0f7faea4617e7098c9eca5983d425c45f8b2040dd9934da2e6a6c12335b7a6",
+      "shared_bytes": 704638,
+      "state_bytes": 64,
+      "wall_seconds": 1.7083995699999832,
+      "peak_rss_bytes": 23289856
+    },
+    {
+      "seed": 1873202302479958882,
+      "raw_file": "raw-01.json",
+      "sha256": "b1a6062e4666e0771c17fdb2b37fb4c64fb653acb7eb830bf5c48577372873dc",
+      "shared_bytes": 704638,
+      "state_bytes": 64,
+      "wall_seconds": 1.7078499030000103,
+      "peak_rss_bytes": 23289856
+    },
+    {
+      "seed": 5225373774433876496,
+      "raw_file": "raw-02.json",
+      "sha256": "f0446fd369079ff3d38a21fb9cc2315ac9d073a5851065a4e6cb013ae23d1f2d",
+      "shared_bytes": 704638,
+      "state_bytes": 64,
+      "wall_seconds": 1.732703929999957,
+      "peak_rss_bytes": 23289856
+    },
+    {
+      "seed": 17479120403910210394,
+      "raw_file": "raw-03.json",
+      "sha256": "9af6ef3246e5f9060317ae44576903455f48e6bbdcdb5ca5e5d74ab406c650f3",
+      "shared_bytes": 704638,
+      "state_bytes": 64,
+      "wall_seconds": 1.732745444000102,
+      "peak_rss_bytes": 23289856
+    },
+    {
+      "seed": 12838208775675104919,
+      "raw_file": "raw-04.json",
+      "sha256": "3d09c78e249c800883290f69a0e38d1924d187919c04b70cb4cecfe735817feb",
+      "shared_bytes": 704638,
+      "state_bytes": 64,
+      "wall_seconds": 1.732923340999946,
+      "peak_rss_bytes": 23289856
+    }
+  ]
+}
