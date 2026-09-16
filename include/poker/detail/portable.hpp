@@ -1050,18 +1050,27 @@ POKER_NOINLINE inline rank suited_best(const Accum& total, const card* first, st
   return best;
 }
 
+// The out-of-line scan is only entered when some suit holds five or more cards.
+// The test is one add and one mask on the sum that is already in a register, so
+// the common hand skips the call, its argument spills and the scan's own retest.
 inline rank finish(const Accum& total, const card* cards, std::size_t count) noexcept {
-  return std::min(classify(total), suited_best(total, cards, count, nullptr, 0));
+  const rank plain = classify(total);
+  if (!any_five_in_a_suit(total.h)) return plain;
+  return std::min(plain, suited_best(total, cards, count, nullptr, 0));
 }
 
 // Exactly seven cards: the table answers the non-flush part.
 inline rank finish_seven(const Accum& total, const card* first, std::size_t first_count,
                          const card* second, std::size_t second_count) noexcept {
-  return std::min(classify_seven(total), suited_best(total, first, first_count, second, second_count));
+  const rank plain = classify_seven(total);
+  if (!any_five_in_a_suit(total.h)) return plain;
+  return std::min(plain, suited_best(total, first, first_count, second, second_count));
 }
 inline rank finish_six(const Accum& total, const card* first, std::size_t first_count,
                        const card* second, std::size_t second_count) noexcept {
-  return std::min(classify_six(total), suited_best(total, first, first_count, second, second_count));
+  const rank plain = classify_six(total);
+  if (!any_five_in_a_suit(total.h)) return plain;
+  return std::min(plain, suited_best(total, first, first_count, second, second_count));
 }
 
 // Every hand size is classified from one pass over its cards. Exactly five cards

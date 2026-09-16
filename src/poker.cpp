@@ -182,7 +182,8 @@ void poker_holdem_board_batch(const poker_card* h, const poker_card* b, std::siz
     total.add(h[i * 2]);
     total.add(h[i * 2 + 1]);
     poker_rank result = poker::detail::classify_sized(total, hand);
-    result = std::min(result, poker::detail::suited_best(total, h + i * 2, 2, b, nb));
+    if (poker::detail::any_five_in_a_suit(total.h))
+      result = std::min(result, poker::detail::suited_best(total, h + i * 2, 2, b, nb));
     out[i] = result;
   }
 }
@@ -291,7 +292,8 @@ void poker_complete_batch(const void* state, const poker_card* h, const poker_ca
       const poker_card* row = h + i * missing_h;
       for (std::size_t j = 0; j < missing_h; ++j) total.add(row[j]);
       poker_rank result = poker::detail::classify_sized(total, hand);
-      result = std::min(result, poker::detail::suited_best(total, known, head.nh, row, missing_h));
+      if (poker::detail::any_five_in_a_suit(total.h))
+        result = std::min(result, poker::detail::suited_best(total, known, head.nh, row, missing_h));
       out[i] = result;
     }
     return;
