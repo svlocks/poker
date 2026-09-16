@@ -449,32 +449,42 @@ using u16 = std::uint16_t;
 using u32 = std::uint32_t;
 using u64 = std::uint64_t;
 
-// Sizes per hand size: 6175, 18313 and 49205 rank multisets respectively, in
-// tables that stay well under half full.
+// Sizes per hand size: 6175, 18395 and 49205 rank multisets respectively. The
+// slot arrays are the smallest powers of two that hold the keys (75%, 56% and
+// 75% full) with three to five keys per bucket. Buckets are placed largest
+// first, which is what lets a table this full still find a displacement for
+// every bucket. The footprint is what matters: a batch of fresh hands touches
+// the table at random, so the table has to stay in cache, and these tables are
+// a quarter, half and half the size of the previous ones.
+//
+// Two keys of one bucket with the same second-level hash collide under every
+// displacement, and the fuller tables make such a pair likely. The slot
+// multipliers were chosen by an offline search over random odd constants for a
+// collision-free placement with the fewest displacement attempts.
 struct Spec5 {
   static constexpr u64 bucket_mul = 0x9E3779B97F4A7C15ull;
-  static constexpr u64 slot_mul = 0xC2B2AE3D27D4EB4Full;
+  static constexpr u64 slot_mul = 0x74BD4A2CEC960C83ull;
   static constexpr u32 cards = 5;
-  static constexpr u32 buckets_log2 = 12;
-  static constexpr u32 slots_log2 = 15;
+  static constexpr u32 buckets_log2 = 11;
+  static constexpr u32 slots_log2 = 13;
   static constexpr u32 piece_keys = 1600;
   static constexpr u32 piece_count = 4;
 };
 struct Spec6 {
   static constexpr u64 bucket_mul = 0x9E3779B97F4A7C15ull;
-  static constexpr u64 slot_mul = 0xC2B2AE3D27D4EB4Full;
+  static constexpr u64 slot_mul = 0x30EC546BABBCDC4Dull;
   static constexpr u32 cards = 6;
-  static constexpr u32 buckets_log2 = 13;
-  static constexpr u32 slots_log2 = 16;
+  static constexpr u32 buckets_log2 = 12;
+  static constexpr u32 slots_log2 = 15;
   static constexpr u32 piece_keys = 1600;
   static constexpr u32 piece_count = 12;
 };
 struct Spec7 {
   static constexpr u64 bucket_mul = 0x9E3779B97F4A7C15ull;
-  static constexpr u64 slot_mul = 0xD6E8FEB86659FD93ull;
+  static constexpr u64 slot_mul = 0x971284CA21118ACFull;
   static constexpr u32 cards = 7;
   static constexpr u32 buckets_log2 = 14;
-  static constexpr u32 slots_log2 = 17;
+  static constexpr u32 slots_log2 = 16;
   static constexpr u32 piece_keys = 1600;
   static constexpr u32 piece_count = 32;
 };
@@ -598,11 +608,19 @@ struct Hashes {
   u32 h[S::piece_count * S::piece_keys];
 };
 
+// Displacements never reach the search bound of 8192, so sixteen bits hold them
+// and the displacement array is half the size it would be as u32.
 template <class S>
 struct Table {
   bool ok = true;
   u16 value[slots_of<S>()];
-  u32 displacement[buckets_of<S>()];
+  u16 displacement[buckets_of<S>()];
+};
+
+// Buckets in the order they are placed: largest first, ties by bucket index.
+template <class S>
+struct Order {
+  u16 bucket[buckets_of<S>()];
 };
 
 // Bucket histogram, then prefix sums.
@@ -642,39 +660,64 @@ constexpr Hashes<S> hashes_of(const Sorted<S>& sorted, const Mapping<S>& map) no
   return out;
 }
 
-// One displacement per bucket, keeping the second level collision free. Ranges
+// Counting sort of the buckets by size, largest first. A big bucket placed into
+// a nearly empty table needs few attempts, and the many one-key buckets that
+// come last fit anywhere there is a hole, so the table can be far fuller than
+// index order allows without the search running away.
+template <class S>
+constexpr Order<S> order_of(const Mapping<S>& map) noexcept {
+  Order<S> out{};
+  const u32 bucket_count = buckets_of<S>();
+  // No bucket comes near this many keys; a larger one would only sort as if it
+  // had exactly this many, and placement would still reject it if it did not fit.
+  constexpr u32 size_limit = 63;
+  u32 first_of[size_limit + 1]{};
+  for (u32 b = 0; b < bucket_count; ++b) ++first_of[std::min(map.start[b + 1] - map.start[b], size_limit)];
+  u32 position = 0;
+  for (u32 size = size_limit + 1; size-- > 0;) {
+    const u32 count = first_of[size];
+    first_of[size] = position;
+    position += count;
+  }
+  for (u32 b = 0; b < bucket_count; ++b)
+    out.bucket[first_of[std::min(map.start[b + 1] - map.start[b], size_limit)]++] = static_cast<u16>(b);
+  return out;
+}
+
+// One displacement per bucket, keeping the second level collision free. The
+// range [first, last) is a run of positions in the placement order, and ranges
 // must be processed in order with the same occupancy bitmap: later buckets may
 // use only slots that earlier buckets left free.
 template <class S>
-constexpr void place_range(Table<S>& table, u64* used, const Sorted<S>& sorted,
-                           const Hashes<S>& hashes, const Mapping<S>& map,
-                           u32 first, u32 last) noexcept {
+constexpr void place_range(Table<S>& table, u64* used, const Sorted<S>& sorted, const Hashes<S>& hashes,
+                           const Mapping<S>& map, const Order<S>& order, u32 first, u32 last) noexcept {
   const u32 slot_mask = slots_of<S>() - 1;
-  for (u32 b = first; b < last; ++b) {
+  for (u32 position = first; position < last; ++position) {
+    const u32 b = order.bucket[position];
     const u32 begin = map.start[b], end = map.start[b + 1];
     if (begin == end) continue;
     bool placed = false;
     for (u32 d = 0; d < 8192; ++d) {
-      // Two keys of this bucket can share a second-level hash, so a displacement
-      // has to be rejected when it maps the bucket onto a slot twice, not only
-      // when it reaches a slot another bucket already owns.
-      u32 taken[256];
-      u32 taken_count = 0;
-      bool ok = true;
-      for (u32 i = begin; i < end && ok; ++i) {
+      // Each slot is claimed in the bitmap as it is reached, so a displacement
+      // that maps two keys of this bucket onto one slot is rejected the same way
+      // as one that reaches a slot another bucket already owns. A rejected
+      // attempt releases the slots it claimed before moving on.
+      u32 i = begin;
+      for (; i < end; ++i) {
         const u32 slot = (hashes.h[i] + d) & slot_mask;
-        if (used[slot >> 6] & (1ull << (slot & 63))) { ok = false; break; }
-        for (u32 k = 0; k < taken_count; ++k)
-          if (taken[k] == slot) { ok = false; break; }
-        if (ok) { if (taken_count == 256) { ok = false; break; } taken[taken_count++] = slot; }
+        const u64 bit = 1ull << (slot & 63);
+        if (used[slot >> 6] & bit) break;
+        used[slot >> 6] |= bit;
       }
-      if (!ok) continue;
-      for (u32 i = begin; i < end; ++i) {
-        const u32 slot = (hashes.h[i] + d) & slot_mask;
-        used[slot >> 6] |= 1ull << (slot & 63);
-        table.value[slot] = sorted.rank[i];
+      if (i < end) {
+        for (u32 k = begin; k < i; ++k) {
+          const u32 slot = (hashes.h[k] + d) & slot_mask;
+          used[slot >> 6] &= ~(1ull << (slot & 63));
+        }
+        continue;
       }
-      table.displacement[b] = d;
+      for (u32 k = begin; k < end; ++k) table.value[(hashes.h[k] + d) & slot_mask] = sorted.rank[k];
+      table.displacement[b] = static_cast<u16>(d);
       placed = true;
       break;
     }
@@ -683,11 +726,11 @@ constexpr void place_range(Table<S>& table, u64* used, const Sorted<S>& sorted,
 }
 
 template <class S>
-constexpr Table<S> place(const Sorted<S>& sorted, const Hashes<S>& hashes,
-                         const Mapping<S>& map) noexcept {
+constexpr Table<S> place(const Sorted<S>& sorted, const Hashes<S>& hashes, const Mapping<S>& map,
+                         const Order<S>& order) noexcept {
   Table<S> table{};
   u64 used[(slots_of<S>() + 63) / 64]{};
-  place_range(table, used, sorted, hashes, map, 0, buckets_of<S>());
+  place_range(table, used, sorted, hashes, map, order, 0, buckets_of<S>());
   return table;
 }
 
@@ -700,10 +743,10 @@ struct Placement {
 };
 
 template <class S>
-constexpr Placement<S> place_next(Placement<S> state, const Sorted<S>& sorted,
-                                  const Hashes<S>& hashes, const Mapping<S>& map,
-                                  u32 first, u32 last) noexcept {
-  place_range(state.table, state.used, sorted, hashes, map, first, last);
+constexpr Placement<S> place_next(Placement<S> state, const Sorted<S>& sorted, const Hashes<S>& hashes,
+                                  const Mapping<S>& map, const Order<S>& order, u32 first,
+                                  u32 last) noexcept {
+  place_range(state.table, state.used, sorted, hashes, map, order, first, last);
   return state;
 }
 
@@ -744,7 +787,8 @@ inline constexpr chd::Slices<chd::Spec5> pieces5{
 inline constexpr chd::Mapping<chd::Spec5> map5 = chd::map_of<chd::Spec5>(pieces5);
 inline constexpr chd::Sorted<chd::Spec5> sorted5 = chd::sorted_of<chd::Spec5>(pieces5, map5);
 inline constexpr chd::Hashes<chd::Spec5> hashes5 = chd::hashes_of<chd::Spec5>(sorted5, map5);
-inline constexpr chd::Table<chd::Spec5> table5 = chd::place<chd::Spec5>(sorted5, hashes5, map5);
+inline constexpr chd::Order<chd::Spec5> order5 = chd::order_of<chd::Spec5>(map5);
+inline constexpr chd::Table<chd::Spec5> table5 = chd::place<chd::Spec5>(sorted5, hashes5, map5, order5);
 static_assert(table5.ok, "perfect hash placement failed for the 5-card table");
 
 inline constexpr chd::Piece<chd::Spec6> piece6_00 = chd::make_piece<chd::Spec6>(0 * chd::Spec6::piece_keys);
@@ -776,7 +820,14 @@ inline constexpr chd::Slices<chd::Spec6> pieces6{
 inline constexpr chd::Mapping<chd::Spec6> map6 = chd::map_of<chd::Spec6>(pieces6);
 inline constexpr chd::Sorted<chd::Spec6> sorted6 = chd::sorted_of<chd::Spec6>(pieces6, map6);
 inline constexpr chd::Hashes<chd::Spec6> hashes6 = chd::hashes_of<chd::Spec6>(sorted6, map6);
-inline constexpr chd::Table<chd::Spec6> table6 = chd::place<chd::Spec6>(sorted6, hashes6, map6);
+inline constexpr chd::Order<chd::Spec6> order6 = chd::order_of<chd::Spec6>(map6);
+// The fuller six-card table takes more attempts per bucket than one constant
+// evaluation may spend, so its placement is split into stages like the
+// seven-card one below.
+inline constexpr auto placement6_0 = chd::place_next<chd::Spec6>({}, sorted6, hashes6, map6, order6, 0, 2048);
+inline constexpr auto placement6_1 =
+    chd::place_next(placement6_0, sorted6, hashes6, map6, order6, 2048, chd::buckets_of<chd::Spec6>());
+inline constexpr chd::Table<chd::Spec6> table6 = placement6_1.table;
 static_assert(table6.ok, "perfect hash placement failed for the 6-card table");
 
 inline constexpr chd::Piece<chd::Spec7> piece7_00 = chd::make_piece<chd::Spec7>(0 * chd::Spec7::piece_keys);
@@ -848,18 +899,44 @@ inline constexpr chd::Slices<chd::Spec7> pieces7{
 inline constexpr chd::Mapping<chd::Spec7> map7 = chd::map_of<chd::Spec7>(pieces7);
 inline constexpr chd::Sorted<chd::Spec7> sorted7 = chd::sorted_of<chd::Spec7>(pieces7, map7);
 inline constexpr chd::Hashes<chd::Spec7> hashes7 = chd::hashes_of<chd::Spec7>(sorted7, map7);
-// The complete seven-card placement exceeds MSVC's default constexpr step
-// budget. Each named stage continues the same search for 1/8 of the buckets,
-// resetting the compiler's evaluation budget without changing the table.
-inline constexpr auto placement7_0 = chd::place_next<chd::Spec7>({}, sorted7, hashes7, map7, 0, 2048);
-inline constexpr auto placement7_1 = chd::place_next(placement7_0, sorted7, hashes7, map7, 2048, 4096);
-inline constexpr auto placement7_2 = chd::place_next(placement7_1, sorted7, hashes7, map7, 4096, 6144);
-inline constexpr auto placement7_3 = chd::place_next(placement7_2, sorted7, hashes7, map7, 6144, 8192);
-inline constexpr auto placement7_4 = chd::place_next(placement7_3, sorted7, hashes7, map7, 8192, 10240);
-inline constexpr auto placement7_5 = chd::place_next(placement7_4, sorted7, hashes7, map7, 10240, 12288);
-inline constexpr auto placement7_6 = chd::place_next(placement7_5, sorted7, hashes7, map7, 12288, 14336);
-inline constexpr auto placement7_7 = chd::place_next(placement7_6, sorted7, hashes7, map7, 14336, chd::buckets_of<chd::Spec7>());
-inline constexpr chd::Table<chd::Spec7> table7 = placement7_7.table;
+inline constexpr chd::Order<chd::Spec7> order7 = chd::order_of<chd::Spec7>(map7);
+// The complete seven-card placement exceeds the default constexpr step budget
+// of MSVC and Clang. Each named stage continues the same search for 1/16 of
+// the placement order, resetting the compiler's evaluation budget without
+// changing the table.
+inline constexpr auto placement7_00 =
+    chd::place_next<chd::Spec7>({}, sorted7, hashes7, map7, order7, 0, 1024);
+inline constexpr auto placement7_01 =
+    chd::place_next(placement7_00, sorted7, hashes7, map7, order7, 1024, 2048);
+inline constexpr auto placement7_02 =
+    chd::place_next(placement7_01, sorted7, hashes7, map7, order7, 2048, 3072);
+inline constexpr auto placement7_03 =
+    chd::place_next(placement7_02, sorted7, hashes7, map7, order7, 3072, 4096);
+inline constexpr auto placement7_04 =
+    chd::place_next(placement7_03, sorted7, hashes7, map7, order7, 4096, 5120);
+inline constexpr auto placement7_05 =
+    chd::place_next(placement7_04, sorted7, hashes7, map7, order7, 5120, 6144);
+inline constexpr auto placement7_06 =
+    chd::place_next(placement7_05, sorted7, hashes7, map7, order7, 6144, 7168);
+inline constexpr auto placement7_07 =
+    chd::place_next(placement7_06, sorted7, hashes7, map7, order7, 7168, 8192);
+inline constexpr auto placement7_08 =
+    chd::place_next(placement7_07, sorted7, hashes7, map7, order7, 8192, 9216);
+inline constexpr auto placement7_09 =
+    chd::place_next(placement7_08, sorted7, hashes7, map7, order7, 9216, 10240);
+inline constexpr auto placement7_10 =
+    chd::place_next(placement7_09, sorted7, hashes7, map7, order7, 10240, 11264);
+inline constexpr auto placement7_11 =
+    chd::place_next(placement7_10, sorted7, hashes7, map7, order7, 11264, 12288);
+inline constexpr auto placement7_12 =
+    chd::place_next(placement7_11, sorted7, hashes7, map7, order7, 12288, 13312);
+inline constexpr auto placement7_13 =
+    chd::place_next(placement7_12, sorted7, hashes7, map7, order7, 13312, 14336);
+inline constexpr auto placement7_14 =
+    chd::place_next(placement7_13, sorted7, hashes7, map7, order7, 14336, 15360);
+inline constexpr auto placement7_15 =
+    chd::place_next(placement7_14, sorted7, hashes7, map7, order7, 15360, chd::buckets_of<chd::Spec7>());
+inline constexpr chd::Table<chd::Spec7> table7 = placement7_15.table;
 static_assert(table7.ok, "perfect hash placement failed for the 7-card table");
 
 
