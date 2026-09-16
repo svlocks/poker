@@ -99,24 +99,16 @@ The full API is documented in [docs/api.md](docs/api.md).
 
 ## Performance
 
-Measured on a GitHub-hosted `ubuntu-24.04` runner (AMD EPYC 7763, GCC 13.3,
-portable Release build without `-march=native`). Shared CI machines are noisy,
-so read these as ballpark figures, not a claim of record speed.
+Every merge to `main` re-measures all 149 benchmark workloads on a
+GitHub-hosted Linux runner and publishes the report, with the tested commit,
+CPU and compiler, to the `benchmark-results` branch:
 
-| Workload | ns per hand | Hands per second |
-| --- | ---: | ---: |
-| 5-card, batches of 1024 | 8.6 | 116 M |
-| 7-card, batches of 1024 | 46 | 22 M |
-| 7-card, one at a time, header template | 205 | 4.9 M |
-| Omaha 4 hole + 5 board, batches of 1024 | 117 | 8.5 M |
-| Six-player Hold'em Monte Carlo trial | 700 | 1.4 M trials/s |
+**[Latest benchmark report](https://github.com/svlocks/poker/blob/benchmark-results/latest.md)**
 
-The "one at a time" number chains each input on the previous result, so it is
-a dependent-latency figure, not throughput. Every merge to `main` re-measures
-all 149 workloads and publishes the report to the
-[`benchmark-results`](https://github.com/svlocks/poker/blob/benchmark-results/latest.md)
-branch. Methodology, including how pull requests are compared against `main`,
-is in [docs/benchmarking.md](docs/benchmarking.md).
+Shared CI machines are noisy, so treat those figures as ballpark numbers for a
+portable build rather than a claim of record speed. Pull requests are compared
+against `main` in paired runs on one machine; the methodology is in
+[docs/benchmarking.md](docs/benchmarking.md).
 
 ## Testing
 
