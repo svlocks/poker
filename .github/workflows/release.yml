@@ -1,0 +1,47 @@
+# Tagging vX.Y.Z creates the GitHub release. The tag must match the version in
+# CMakeLists.txt and have a section in CHANGELOG.md, so a mistagged commit is
+# caught before anyone builds from it.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check the tag against CMakeLists.txt and CHANGELOG.md
+        run: |
+          python3 - "$GITHUB_REF_NAME" <<'EOF'
+          import re, sys
+          tag = sys.argv[1]
+          version = tag.removeprefix("v")
+          cmake = re.search(r"project\(\w+\s+VERSION\s+([0-9.]+)", open("CMakeLists.txt").read()).group(1)
+          if cmake != version:
+              sys.exit(f"tag {tag} does not match CMakeLists.txt version {cmake}")
+          text = open("CHANGELOG.md").read()
+          match = re.search(rf"^## \[{re.escape(version)}\][^\n]*\n(.*?)(?=^## \[|\Z)", text, re.S | re.M)
+          if not match or not match.group(1).strip():
+              sys.exit(f"CHANGELOG.md has no section for {version}")
+          open("notes.md", "w").write(match.group(1).strip() + "\n")
+          print(f"Release {version} notes:\n{match.group(1).strip()}")
+          EOF
+      - name: Build and run the quick suite
+        run: |
+          cmake --preset release
+          cmake --build --preset release --parallel 4
+          ctest --preset quick
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" --verify-tag --title "$GITHUB_REF_NAME" --notes-file notes.md

@@ -1,0 +1,32 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {"major": 3, "minor": 25, "patch": 0},
+  "configurePresets": [
+    {"name": "base", "hidden": true, "generator": "Ninja", "binaryDir": "${sourceDir}/build/${presetName}", "cacheVariables": {"CMAKE_BUILD_TYPE": "Release"}},
+    {"name": "release", "inherits": "base"},
+    {"name": "debug", "inherits": "base", "cacheVariables": {"CMAKE_BUILD_TYPE": "Debug"}},
+    {"name": "native", "inherits": "base", "cacheVariables": {"POKER_NATIVE": "ON", "POKER_LTO": "ON"}},
+    {"name": "asan", "inherits": "base", "cacheVariables": {"CMAKE_BUILD_TYPE": "RelWithDebInfo", "POKER_SANITIZE": "ON", "POKER_BUILD_BENCHMARKS": "OFF"}},
+    {"name": "tsan", "inherits": "base", "cacheVariables": {"CMAKE_BUILD_TYPE": "RelWithDebInfo", "POKER_TSAN": "ON", "POKER_BUILD_BENCHMARKS": "OFF"}},
+    {"name": "clang", "inherits": "base", "cacheVariables": {"CMAKE_C_COMPILER": "clang", "CMAKE_CXX_COMPILER": "clang++"}},
+    {"name": "fuzz", "inherits": "clang", "cacheVariables": {"POKER_FUZZ": "ON", "POKER_SANITIZE": "ON", "POKER_BUILD_BENCHMARKS": "OFF"}},
+    {"name": "exhaustive", "inherits": "base", "cacheVariables": {"POKER_EXHAUSTIVE_MAX_CARDS": "7", "POKER_BUILD_BENCHMARKS": "OFF"}}
+  ],
+  "buildPresets": [
+    {"name": "release", "configurePreset": "release"},
+    {"name": "debug", "configurePreset": "debug"},
+    {"name": "native", "configurePreset": "native"},
+    {"name": "asan", "configurePreset": "asan"},
+    {"name": "tsan", "configurePreset": "tsan"},
+    {"name": "clang", "configurePreset": "clang"},
+    {"name": "fuzz", "configurePreset": "fuzz"},
+    {"name": "exhaustive", "configurePreset": "exhaustive"}
+  ],
+  "testPresets": [
+    {"name": "quick", "configurePreset": "release", "filter": {"include": {"label": "quick"}}, "output": {"outputOnFailure": true}, "execution": {"noTestsAction": "error"}},
+    {"name": "release", "configurePreset": "release", "output": {"outputOnFailure": true}, "execution": {"noTestsAction": "error"}},
+    {"name": "asan", "configurePreset": "asan", "filter": {"include": {"label": "quick"}}, "output": {"outputOnFailure": true}},
+    {"name": "tsan", "configurePreset": "tsan", "filter": {"include": {"label": "quick"}}, "output": {"outputOnFailure": true}},
+    {"name": "exhaustive", "configurePreset": "exhaustive", "filter": {"include": {"label": "exhaustive"}}, "output": {"outputOnFailure": true}, "execution": {"noTestsAction": "error"}}
+  ]
+}

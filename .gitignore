@@ -1,0 +1,9 @@
+/build/
+/.artifacts/
+/.deps/
+/.venv/
+__pycache__/
+*.pyc
+/CMakeUserPresets.json
+/.envrc
+/.direnv/

@@ -1,0 +1,16 @@
+name: Feature or optimization idea
+description: Propose an API addition or a performance idea before writing the code
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: The idea
+      description: What would change and why it helps. For performance ideas, which workloads you expect to move.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence so far
+      description: Prototype numbers, references, or reasoning. Optional.

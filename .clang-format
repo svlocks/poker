@@ -1,0 +1,17 @@
+# Applied to changed lines only: run `git clang-format` before committing.
+BasedOnStyle: Google
+Standard: c++20
+ColumnLimit: 110
+IndentWidth: 2
+AccessModifierOffset: -1
+AllowShortFunctionsOnASingleLine: All
+AllowShortIfStatementsOnASingleLine: WithoutElse
+AllowShortLoopsOnASingleLine: true
+AllowShortCaseLabelsOnASingleLine: true
+BinPackArguments: true
+BinPackParameters: true
+DerivePointerAlignment: false
+PointerAlignment: Left
+SpacesBeforeTrailingComments: 2
+SortIncludes: Never
+IncludeBlocks: Preserve

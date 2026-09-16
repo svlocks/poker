@@ -1,0 +1,31 @@
+name: Bug report
+description: A wrong rank, a crash, or a build failure
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: Include the cards if a rank is wrong. Card IDs are `4 * (rank - 2) + suit`; text like `As Kh 2c` is fine too.
+      placeholder: |
+        poker_eval_high on {50, 46, 42, 38, 34, 0, 5} returns 12; expected 1.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      placeholder: v0.1.0 or a commit SHA
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Compiler and platform
+      placeholder: GCC 13.3, Ubuntu 24.04 x86-64
+    validations:
+      required: true

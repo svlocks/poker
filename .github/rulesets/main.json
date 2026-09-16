@@ -1,0 +1,63 @@
+{
+  "name": "Main",
+  "target": "branch",
+  "enforcement": "active",
+  "bypass_actors": [],
+  "conditions": {
+    "ref_name": {
+      "include": [
+        "refs/heads/main"
+      ],
+      "exclude": []
+    }
+  },
+  "rules": [
+    {
+      "type": "deletion"
+    },
+    {
+      "type": "non_fast_forward"
+    },
+    {
+      "type": "required_linear_history"
+    },
+    {
+      "type": "pull_request",
+      "parameters": {
+        "required_approving_review_count": 0,
+        "dismiss_stale_reviews_on_push": true,
+        "require_code_owner_review": true,
+        "require_last_push_approval": false,
+        "required_review_thread_resolution": true,
+        "allowed_merge_methods": [
+          "squash"
+        ]
+      }
+    },
+    {
+      "type": "required_status_checks",
+      "parameters": {
+        "strict_required_status_checks_policy": true,
+        "do_not_enforce_on_create": false,
+        "required_status_checks": [
+          { "context": "test (linux-gcc)", "integration_id": 15368 },
+          { "context": "test (linux-clang)", "integration_id": 15368 },
+          { "context": "test (linux-arm)", "integration_id": 15368 },
+          { "context": "test (macos)", "integration_id": 15368 },
+          { "context": "test (windows)", "integration_id": 15368 },
+          { "context": "sanitizer (asan)", "integration_id": 15368 },
+          { "context": "sanitizer (tsan)", "integration_id": 15368 },
+          { "context": "exhaustive (6, 0)", "integration_id": 15368 },
+          { "context": "exhaustive (6, 1)", "integration_id": 15368 },
+          { "context": "exhaustive (6, 2)", "integration_id": 15368 },
+          { "context": "exhaustive (6, 3)", "integration_id": 15368 },
+          { "context": "exhaustive (7, 0)", "integration_id": 15368 },
+          { "context": "exhaustive (7, 1)", "integration_id": 15368 },
+          { "context": "exhaustive (7, 2)", "integration_id": 15368 },
+          { "context": "exhaustive (7, 3)", "integration_id": 15368 },
+          { "context": "lint", "integration_id": 15368 }
+        ]
+      }
+    }
+  ]
+}

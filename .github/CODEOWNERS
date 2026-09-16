@@ -1,0 +1,6 @@
+# Everything needs a code-owner review except the evaluator implementation,
+# which is covered by CI's correctness suite and paired benchmark instead.
+* @svlocks
+
+/src/
+/include/poker/detail/

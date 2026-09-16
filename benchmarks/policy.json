@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "records": 512,
+  "pairs": 31,
+  "exhaustive_max_cards": 7,
+  "family_error_probability": 0.05,
+  "minimum_improvement": 0.01,
+  "maximum_regression": 0.03,
+  "maximum_process_rss_mib": 256,
+  "maximum_shared_bytes": 1048576,
+  "maximum_state_bytes": 4096,
+  "maximum_initialization_ns": 1000000000,
+  "process_timeout_seconds": 300
+}
