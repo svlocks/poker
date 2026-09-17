@@ -158,15 +158,16 @@ void poker_omaha_board_batch(const poker_card* h, std::size_t nh, const poker_ca
     for (std::size_t i = 0; i < count; ++i) out[i] = poker_eval_omaha_unchecked(h + i * nh, nh, b, nb);
     return;
   }
-  // The board is shared: its three-card groups are built once for the batch.
-  poker::detail::Group triples[56];
-  const unsigned triple_count = poker::detail::omaha_triples_flat(b, nb, triples);
+  // The board is shared: its three-card groups and suit counts are built once.
+  std::uint16_t triples[poker::detail::max_omaha_triples];
+  const unsigned triple_count = poker::detail::omaha_triple_codes(b, nb, triples);
+  const std::uint32_t board_lanes = poker::detail::suit_lanes(b, nb);
   for (std::size_t i = 0; i < count; ++i) {
-    poker::detail::Group pairs[28];
-    const unsigned pair_count = poker::detail::omaha_pairs_flat(h + i * nh, nh, pairs);
-    out[i] = triple_count == 10
-      ? poker::detail::omaha_groups_wide<10>(pairs, pair_count, triples)
-      : poker::detail::omaha_groups(pairs, pair_count, triples, triple_count);
+    const poker_card* holes = h + i * nh;
+    std::uint32_t pairs[poker::detail::max_omaha_pairs];
+    const unsigned pair_count = poker::detail::omaha_pair_offsets(holes, nh, pairs);
+    out[i] = poker::detail::omaha_from_groups(pairs, pair_count, triples, triple_count, holes, nh, b, nb,
+                                              poker::detail::suit_lanes(holes, nh), board_lanes);
   }
 }
 void poker_holdem_board_batch(const poker_card* h, const poker_card* b, std::size_t nb, std::size_t count, poker_rank* out) {
@@ -303,32 +304,47 @@ void poker_complete_batch(const void* state, const poker_card* h, const poker_ca
       out[i] = completed(state, missing_h ? h + i * missing_h : nullptr, missing_b ? b + i * missing_b : nullptr);
     return;
   }
-  // Omaha completion: the prepared holes are shared by every row, and only the
-  // board groups change when a row supplies its own board cards.
+  // Omaha completion: a group that is fully known is prepared once for every
+  // row; a group a row completes is rebuilt from the known cards plus the row.
   const poker_card* known_holes = holes_of(state);
   const poker_card* known_board = board_of(state, head.final_h);
-  poker::detail::Group pairs[28];
+  const auto final_h = static_cast<std::size_t>(head.final_h);
+  const auto final_b = static_cast<std::size_t>(head.final_b);
+  poker_card hole_row[poker::detail::max_omaha_groups];
+  poker_card board_row[poker::detail::max_omaha_groups];
+  const poker_card* holes = known_holes;
+  const poker_card* board = known_board;
+  std::uint32_t pairs[poker::detail::max_omaha_pairs];
   unsigned pair_count = 0;
-  if (!missing_h) pair_count = poker::detail::omaha_pairs_flat(known_holes, head.final_h, pairs);
-  poker::detail::Group triples[56];
+  std::uint32_t hole_lanes = 0;
+  if (!missing_h) {
+    pair_count = poker::detail::omaha_pair_offsets(known_holes, final_h, pairs);
+    hole_lanes = poker::detail::suit_lanes(known_holes, final_h);
+  }
+  std::uint16_t triples[poker::detail::max_omaha_triples];
   unsigned triple_count = 0;
-  if (!missing_b) triple_count = poker::detail::omaha_triples_flat(known_board, head.final_b, triples);
+  std::uint32_t board_lanes = 0;
+  if (!missing_b) {
+    triple_count = poker::detail::omaha_triple_codes(known_board, final_b, triples);
+    board_lanes = poker::detail::suit_lanes(known_board, final_b);
+  }
   for (std::size_t i = 0; i < count; ++i) {
     if (missing_h) {
-      poker_card row[8];
-      if (head.nh) std::memcpy(row, known_holes, head.nh);
-      std::memcpy(row + head.nh, h + i * missing_h, missing_h);
-      pair_count = poker::detail::omaha_pairs_flat(row, head.final_h, pairs);
+      if (head.nh) std::memcpy(hole_row, known_holes, head.nh);
+      std::memcpy(hole_row + head.nh, h + i * missing_h, missing_h);
+      holes = hole_row;
+      pair_count = poker::detail::omaha_pair_offsets(holes, final_h, pairs);
+      hole_lanes = poker::detail::suit_lanes(holes, final_h);
     }
     if (missing_b) {
-      poker_card row[8];
-      if (head.nb) std::memcpy(row, known_board, head.nb);
-      std::memcpy(row + head.nb, b + i * missing_b, missing_b);
-      triple_count = poker::detail::omaha_triples_flat(row, head.final_b, triples);
+      if (head.nb) std::memcpy(board_row, known_board, head.nb);
+      std::memcpy(board_row + head.nb, b + i * missing_b, missing_b);
+      board = board_row;
+      triple_count = poker::detail::omaha_triple_codes(board, final_b, triples);
+      board_lanes = poker::detail::suit_lanes(board, final_b);
     }
-    out[i] = triple_count == 10
-      ? poker::detail::omaha_groups_wide<10>(pairs, pair_count, triples)
-      : poker::detail::omaha_groups(pairs, pair_count, triples, triple_count);
+    out[i] = poker::detail::omaha_from_groups(pairs, pair_count, triples, triple_count, holes, final_h, board,
+                                              final_b, hole_lanes, board_lanes);
   }
 }
 } // extern C
