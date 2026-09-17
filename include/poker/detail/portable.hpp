@@ -406,23 +406,50 @@ inline bool any_five_in_a_suit(std::uint64_t h) noexcept {
   return ((((h >> 39) + lane_bias) & lane_high) != 0);
 }
 
-// The four contiguous rank masks from the sum. Only the arithmetic classifier,
-// used above seven cards, needs them.
-inline numbers::u16 compress_ranks(std::uint64_t spaced) noexcept {
+// Contiguous rank mask from one plane of the sum: bit r of the result is bit 3r
+// of the plane. Only the five-card flush path uses this loop form, for about two
+// hands in a thousand, and it stays as it is: the compiler vectorises it, so it
+// costs the surrounding batch loop nothing.
+constexpr numbers::u16 compress_ranks(std::uint64_t spaced) noexcept {
   numbers::u16 out = 0;
   for (unsigned r = 0; r < 13; ++r)
     out = static_cast<numbers::u16>(out | (((spaced >> (3u * r)) & 1u) << r));
   return out;
 }
+
+// The same gather without a loop, for the arithmetic classifier above seven
+// cards, which needs three of them per hand. Three shift-and-mask folds bring
+// pairs, then fours, then eights of neighbouring ranks together, and the last
+// step drops rank twelve into place: sixteen operations.
+inline constexpr std::uint64_t rank_ones = 0x1249249249ull;  // bit 3r for r < 13
+constexpr numbers::u16 fold_ranks(std::uint64_t plane) noexcept {
+  std::uint64_t x = plane & rank_ones;
+  x = (x | (x >> 2)) & 0x30C30C30C3ull;  // ranks 2k, 2k+1 at bits 6k, 6k+1
+  x = (x | (x >> 4)) & 0x100F00F00Full;  // fours at bits 0, 12, 24; rank 12 at 36
+  x = (x | (x >> 8)) & 0x100F00FFull;    // eight at 0, four at 16; rank 12 at 28
+  return static_cast<numbers::u16>(((x | (x >> 8)) & 0xFFFull) | ((x >> 16) & 0x1000ull));
+}
+static_assert(fold_ranks(rank_ones) == 0x1FFF && compress_ranks(rank_ones) == 0x1FFF, "every rank");
+static_assert(fold_ranks(std::uint64_t{1} << 36) == 0x1000, "rank twelve alone");
+static_assert(fold_ranks((std::uint64_t{1} << 3) | (std::uint64_t{1} << 33)) == 0x0802,
+              "ranks one and eleven");
+static_assert(fold_ranks(0x2492492492ull) == 0, "the middle plane is not the low plane");
+static_assert(fold_ranks(0x1FFF'FFFF'FFFF'FFFFull) == compress_ranks(0x1FFF'FFFF'FFFF'FFFFull),
+              "suit lanes are ignored");
+
+// The four contiguous rank masks from the sum. Only the arithmetic classifier,
+// used above seven cards, needs them. A count of one to four is the low, the
+// middle, both, or the high bit of its three-bit field, so the masks come from
+// the three bit planes.
 struct RankMasks {
   numbers::u16 seen, pairs, trips, quads;
 };
 inline RankMasks masks_of(std::uint64_t h) noexcept {
-  const std::uint64_t b0 = h & spaced_ones;
-  const std::uint64_t b1 = (h >> 1) & spaced_ones;
-  const std::uint64_t b2 = (h >> 2) & spaced_ones;
-  return RankMasks{compress_ranks(b0 | b1 | b2), compress_ranks(b1 | b2),
-                   compress_ranks((b0 & b1) | b2), compress_ranks(b2)};
+  const numbers::u16 low = fold_ranks(h);
+  const numbers::u16 middle = fold_ranks(h >> 1);
+  const numbers::u16 high = fold_ranks(h >> 2);
+  return RankMasks{static_cast<numbers::u16>(low | middle | high), static_cast<numbers::u16>(middle | high),
+                   static_cast<numbers::u16>((low & middle) | high), high};
 }
 
 // The rank multiset as the sum encodes it: the key table5 is built over.
