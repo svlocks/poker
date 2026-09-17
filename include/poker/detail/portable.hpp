@@ -278,7 +278,8 @@ constexpr std::array<u16, pair_codes * triple_codes> assemble_omaha_table() noex
 // Group preparation happens once per evaluation and dominated the Omaha profile:
 // sorting the ranks and running the combinatorial formulas for every pair and
 // triple costs more than the combination sweep itself. These tables are indexed
-// by the ranks in any order and do both steps in one load.
+// by the ranks in any order and do both steps in one load. The pair table
+// already carries the row offset, so a combination's entry is one add away.
 constexpr std::array<u16, 13 * 13> make_pair_layout() noexcept {
   std::array<u16, 13 * 13> out{};
   for (int a = 0; a < 13; ++a)
@@ -288,14 +289,6 @@ constexpr std::array<u16, 13 * 13> make_pair_layout() noexcept {
       out[static_cast<std::size_t>(a * 13 + b)] =
         static_cast<u16>(pair_code(low, high) * triple_codes);
     }
-  return out;
-}
-constexpr std::array<u16, 13 * 13> make_pair_mask() noexcept {
-  std::array<u16, 13 * 13> out{};
-  for (int a = 0; a < 13; ++a)
-    for (int b = 0; b < 13; ++b)
-      out[static_cast<std::size_t>(a * 13 + b)] =
-        static_cast<u16>((u16{1} << a) | (u16{1} << b));
   return out;
 }
 constexpr std::array<u16, 13 * 13 * 13> make_triple_codes() noexcept {
@@ -316,19 +309,8 @@ constexpr std::array<u16, 13 * 13 * 13> make_triple_codes() noexcept {
       }
   return out;
 }
-constexpr std::array<u16, 13 * 13 * 13> make_triple_masks() noexcept {
-  std::array<u16, 13 * 13 * 13> out{};
-  for (int a = 0; a < 13; ++a)
-    for (int b = 0; b < 13; ++b)
-      for (int c = 0; c < 13; ++c)
-        out[static_cast<std::size_t>((a * 13 + b) * 13 + c)] =
-          static_cast<u16>((u16{1} << a) | (u16{1} << b) | (u16{1} << c));
-  return out;
-}
 inline constexpr std::array<u16, 13 * 13> pair_layout = make_pair_layout();
-inline constexpr std::array<u16, 13 * 13> pair_mask = make_pair_mask();
 inline constexpr std::array<u16, 13 * 13 * 13> triple_codes_by_rank = make_triple_codes();
-inline constexpr std::array<u16, 13 * 13 * 13> triple_mask_by_rank = make_triple_masks();
 
 // Ranks of two hole cards plus three board cards, suits excluded; a suited
 // combination is a flush or straight flush and always outranks these values.
@@ -976,11 +958,9 @@ static_assert(table7.ok, "perfect hash placement failed for the 7-card table");
 // removes the index mask as well and keeps every unchecked input inside the
 // table.
 
-inline constexpr std::size_t shared_bytes = sizeof(numbers::tables) + sizeof(numbers::omaha_table) +
-  sizeof(spaced_bits) +
-  sizeof(table5) + sizeof(table6) + sizeof(table7) +
-  sizeof(numbers::pair_layout) + sizeof(numbers::pair_mask) +
-  sizeof(numbers::triple_codes_by_rank) + sizeof(numbers::triple_mask_by_rank);
+inline constexpr std::size_t shared_bytes =
+    sizeof(numbers::tables) + sizeof(numbers::omaha_table) + sizeof(spaced_bits) + sizeof(table5) +
+    sizeof(table6) + sizeof(table7) + sizeof(numbers::pair_layout) + sizeof(numbers::triple_codes_by_rank);
 inline void initialize() noexcept {
   (void)numbers::tables;
   (void)numbers::omaha_table;
@@ -1110,645 +1090,190 @@ inline rank high(const card* cards, std::size_t count) noexcept {
   return finish(total, cards, count);
 }
 
-// One hole pair or one board triple, prepared for the rank table.
-struct Group {
-  numbers::u32 index;  // table offset for a pair, rank-multiset code for a triple
-  numbers::u16 mask;   // ranks held, needed when the whole hand is one suit
-  numbers::u8 suit;
-  bool suited;         // every card of the group shares one suit
-};
+// Omaha: exactly two hole cards and three board cards. A combination that is
+// not all one suit has the rank its two rank multisets give, so the unsuited
+// answer is one table load per combination: a hole pair's row offset plus a
+// board triple's code. Flushes are handled apart, and only for a suit that can
+// make one: at least two hole cards and three board cards of that suit.
 
 // Groups beyond this size use the subset path, which needs no prepared lists.
 inline constexpr std::size_t max_omaha_groups = 8;
+inline constexpr unsigned max_omaha_pairs = 28;    // C(8, 2)
+inline constexpr unsigned max_omaha_triples = 56;  // C(8, 3)
 
-inline unsigned omaha_pairs(const card* holes, std::size_t nh, Group* out) noexcept {
+// Row offsets of every two-card rank multiset among the holes. A fixed size lets
+// the compiler unroll the triangular loop, which a runtime bound does not get.
+template <std::size_t N>
+inline unsigned omaha_pair_offsets_fixed(const card* holes, numbers::u32* out) noexcept {
+  unsigned ranks[N];
+  for (std::size_t i = 0; i < N; ++i) ranks[i] = holes[i] >> 2;
+  unsigned count = 0;
+  for (std::size_t i = 0; i < N; ++i)
+    for (std::size_t j = i + 1; j < N; ++j) out[count++] = numbers::pair_layout[ranks[i] * 13u + ranks[j]];
+  return count;
+}
+inline unsigned omaha_pair_offsets(const card* holes, std::size_t nh, numbers::u32* out) noexcept {
+  switch (nh) {
+    case 4: return omaha_pair_offsets_fixed<4>(holes, out);
+    case 5: return omaha_pair_offsets_fixed<5>(holes, out);
+    case 6: return omaha_pair_offsets_fixed<6>(holes, out);
+    default: break;
+  }
   unsigned count = 0;
   for (std::size_t i = 0; i < nh; ++i)
-    for (std::size_t j = i + 1; j < nh; ++j) {
-      const auto key = static_cast<std::size_t>((holes[i] >> 2) * 13 + (holes[j] >> 2));
-      out[count++] = {numbers::pair_layout[key], numbers::pair_mask[key],
-        static_cast<numbers::u8>(holes[i] & 3u), (holes[i] & 3u) == (holes[j] & 3u)};
+    for (std::size_t j = i + 1; j < nh; ++j)
+      out[count++] = numbers::pair_layout[(holes[i] >> 2) * 13u + (holes[j] >> 2)];
+  return count;
+}
+
+// Rank-multiset codes of every three-card group of the board. Each pair of
+// board ranks is keyed once and every third rank is one add from it.
+template <std::size_t N>
+inline unsigned omaha_triple_codes_fixed(const card* board, numbers::u16* out) noexcept {
+  unsigned ranks[N];
+  for (std::size_t i = 0; i < N; ++i) ranks[i] = board[i] >> 2;
+  unsigned count = 0;
+  for (std::size_t i = 0; i < N; ++i)
+    for (std::size_t j = i + 1; j < N; ++j) {
+      const unsigned base = 13u * (ranks[i] * 13u + ranks[j]);
+      for (std::size_t k = j + 1; k < N; ++k) out[count++] = numbers::triple_codes_by_rank[base + ranks[k]];
     }
   return count;
 }
-
-// 6 hole cards: 15 rank pairs, written out because the triangular
-// loop is not unrolled by the compiler and costs about twice as much.
-inline unsigned omaha_pairs_6(const card* holes, Group* out) noexcept {
-  unsigned count = 0;
-  const unsigned r0 = holes[0] >> 2;
-  const unsigned r1 = holes[1] >> 2;
-  const unsigned r2 = holes[2] >> 2;
-  const unsigned r3 = holes[3] >> 2;
-  const unsigned r4 = holes[4] >> 2;
-  const unsigned r5 = holes[5] >> 2;
-  {
-    const numbers::u32 key = r0 * 13u + r1;
-    out[count].index = numbers::pair_layout[key];
-    out[count].mask = numbers::pair_mask[key];
-    out[count].suit = static_cast<numbers::u8>(holes[0] & 3u);
-    out[count].suited = (holes[0] & 3u) == (holes[1] & 3u);
-    ++count;
+inline unsigned omaha_triple_codes(const card* board, std::size_t nb, numbers::u16* out) noexcept {
+  switch (nb) {
+    case 3: return omaha_triple_codes_fixed<3>(board, out);
+    case 4: return omaha_triple_codes_fixed<4>(board, out);
+    case 5: return omaha_triple_codes_fixed<5>(board, out);
+    default: break;
   }
-  {
-    const numbers::u32 key = r0 * 13u + r2;
-    out[count].index = numbers::pair_layout[key];
-    out[count].mask = numbers::pair_mask[key];
-    out[count].suit = static_cast<numbers::u8>(holes[0] & 3u);
-    out[count].suited = (holes[0] & 3u) == (holes[2] & 3u);
-    ++count;
-  }
-  {
-    const numbers::u32 key = r0 * 13u + r3;
-    out[count].index = numbers::pair_layout[key];
-    out[count].mask = numbers::pair_mask[key];
-    out[count].suit = static_cast<numbers::u8>(holes[0] & 3u);
-    out[count].suited = (holes[0] & 3u) == (holes[3] & 3u);
-    ++count;
-  }
-  {
-    const numbers::u32 key = r0 * 13u + r4;
-    out[count].index = numbers::pair_layout[key];
-    out[count].mask = numbers::pair_mask[key];
-    out[count].suit = static_cast<numbers::u8>(holes[0] & 3u);
-    out[count].suited = (holes[0] & 3u) == (holes[4] & 3u);
-    ++count;
-  }
-  {
-    const numbers::u32 key = r0 * 13u + r5;
-    out[count].index = numbers::pair_layout[key];
-    out[count].mask = numbers::pair_mask[key];
-    out[count].suit = static_cast<numbers::u8>(holes[0] & 3u);
-    out[count].suited = (holes[0] & 3u) == (holes[5] & 3u);
-    ++count;
-  }
-  {
-    const numbers::u32 key = r1 * 13u + r2;
-    out[count].index = numbers::pair_layout[key];
-    out[count].mask = numbers::pair_mask[key];
-    out[count].suit = static_cast<numbers::u8>(holes[1] & 3u);
-    out[count].suited = (holes[1] & 3u) == (holes[2] & 3u);
-    ++count;
-  }
-  {
-    const numbers::u32 key = r1 * 13u + r3;
-    out[count].index = numbers::pair_layout[key];
-    out[count].mask = numbers::pair_mask[key];
-    out[count].suit = static_cast<numbers::u8>(holes[1] & 3u);
-    out[count].suited = (holes[1] & 3u) == (holes[3] & 3u);
-    ++count;
-  }
-  {
-    const numbers::u32 key = r1 * 13u + r4;
-    out[count].index = numbers::pair_layout[key];
-    out[count].mask = numbers::pair_mask[key];
-    out[count].suit = static_cast<numbers::u8>(holes[1] & 3u);
-    out[count].suited = (holes[1] & 3u) == (holes[4] & 3u);
-    ++count;
-  }
-  {
-    const numbers::u32 key = r1 * 13u + r5;
-    out[count].index = numbers::pair_layout[key];
-    out[count].mask = numbers::pair_mask[key];
-    out[count].suit = static_cast<numbers::u8>(holes[1] & 3u);
-    out[count].suited = (holes[1] & 3u) == (holes[5] & 3u);
-    ++count;
-  }
-  {
-    const numbers::u32 key = r2 * 13u + r3;
-    out[count].index = numbers::pair_layout[key];
-    out[count].mask = numbers::pair_mask[key];
-    out[count].suit = static_cast<numbers::u8>(holes[2] & 3u);
-    out[count].suited = (holes[2] & 3u) == (holes[3] & 3u);
-    ++count;
-  }
-  {
-    const numbers::u32 key = r2 * 13u + r4;
-    out[count].index = numbers::pair_layout[key];
-    out[count].mask = numbers::pair_mask[key];
-    out[count].suit = static_cast<numbers::u8>(holes[2] & 3u);
-    out[count].suited = (holes[2] & 3u) == (holes[4] & 3u);
-    ++count;
-  }
-  {
-    const numbers::u32 key = r2 * 13u + r5;
-    out[count].index = numbers::pair_layout[key];
-    out[count].mask = numbers::pair_mask[key];
-    out[count].suit = static_cast<numbers::u8>(holes[2] & 3u);
-    out[count].suited = (holes[2] & 3u) == (holes[5] & 3u);
-    ++count;
-  }
-  {
-    const numbers::u32 key = r3 * 13u + r4;
-    out[count].index = numbers::pair_layout[key];
-    out[count].mask = numbers::pair_mask[key];
-    out[count].suit = static_cast<numbers::u8>(holes[3] & 3u);
-    out[count].suited = (holes[3] & 3u) == (holes[4] & 3u);
-    ++count;
-  }
-  {
-    const numbers::u32 key = r3 * 13u + r5;
-    out[count].index = numbers::pair_layout[key];
-    out[count].mask = numbers::pair_mask[key];
-    out[count].suit = static_cast<numbers::u8>(holes[3] & 3u);
-    out[count].suited = (holes[3] & 3u) == (holes[5] & 3u);
-    ++count;
-  }
-  {
-    const numbers::u32 key = r4 * 13u + r5;
-    out[count].index = numbers::pair_layout[key];
-    out[count].mask = numbers::pair_mask[key];
-    out[count].suit = static_cast<numbers::u8>(holes[4] & 3u);
-    out[count].suited = (holes[4] & 3u) == (holes[5] & 3u);
-    ++count;
-  }
-  return count;
-}
-
-// 5 hole cards: 10 rank pairs, written out because the triangular
-// loop is not unrolled by the compiler and costs about twice as much.
-inline unsigned omaha_pairs_5(const card* holes, Group* out) noexcept {
-  unsigned count = 0;
-  const unsigned r0 = holes[0] >> 2;
-  const unsigned r1 = holes[1] >> 2;
-  const unsigned r2 = holes[2] >> 2;
-  const unsigned r3 = holes[3] >> 2;
-  const unsigned r4 = holes[4] >> 2;
-  {
-    const numbers::u32 key = r0 * 13u + r1;
-    out[count].index = numbers::pair_layout[key];
-    out[count].mask = numbers::pair_mask[key];
-    out[count].suit = static_cast<numbers::u8>(holes[0] & 3u);
-    out[count].suited = (holes[0] & 3u) == (holes[1] & 3u);
-    ++count;
-  }
-  {
-    const numbers::u32 key = r0 * 13u + r2;
-    out[count].index = numbers::pair_layout[key];
-    out[count].mask = numbers::pair_mask[key];
-    out[count].suit = static_cast<numbers::u8>(holes[0] & 3u);
-    out[count].suited = (holes[0] & 3u) == (holes[2] & 3u);
-    ++count;
-  }
-  {
-    const numbers::u32 key = r0 * 13u + r3;
-    out[count].index = numbers::pair_layout[key];
-    out[count].mask = numbers::pair_mask[key];
-    out[count].suit = static_cast<numbers::u8>(holes[0] & 3u);
-    out[count].suited = (holes[0] & 3u) == (holes[3] & 3u);
-    ++count;
-  }
-  {
-    const numbers::u32 key = r0 * 13u + r4;
-    out[count].index = numbers::pair_layout[key];
-    out[count].mask = numbers::pair_mask[key];
-    out[count].suit = static_cast<numbers::u8>(holes[0] & 3u);
-    out[count].suited = (holes[0] & 3u) == (holes[4] & 3u);
-    ++count;
-  }
-  {
-    const numbers::u32 key = r1 * 13u + r2;
-    out[count].index = numbers::pair_layout[key];
-    out[count].mask = numbers::pair_mask[key];
-    out[count].suit = static_cast<numbers::u8>(holes[1] & 3u);
-    out[count].suited = (holes[1] & 3u) == (holes[2] & 3u);
-    ++count;
-  }
-  {
-    const numbers::u32 key = r1 * 13u + r3;
-    out[count].index = numbers::pair_layout[key];
-    out[count].mask = numbers::pair_mask[key];
-    out[count].suit = static_cast<numbers::u8>(holes[1] & 3u);
-    out[count].suited = (holes[1] & 3u) == (holes[3] & 3u);
-    ++count;
-  }
-  {
-    const numbers::u32 key = r1 * 13u + r4;
-    out[count].index = numbers::pair_layout[key];
-    out[count].mask = numbers::pair_mask[key];
-    out[count].suit = static_cast<numbers::u8>(holes[1] & 3u);
-    out[count].suited = (holes[1] & 3u) == (holes[4] & 3u);
-    ++count;
-  }
-  {
-    const numbers::u32 key = r2 * 13u + r3;
-    out[count].index = numbers::pair_layout[key];
-    out[count].mask = numbers::pair_mask[key];
-    out[count].suit = static_cast<numbers::u8>(holes[2] & 3u);
-    out[count].suited = (holes[2] & 3u) == (holes[3] & 3u);
-    ++count;
-  }
-  {
-    const numbers::u32 key = r2 * 13u + r4;
-    out[count].index = numbers::pair_layout[key];
-    out[count].mask = numbers::pair_mask[key];
-    out[count].suit = static_cast<numbers::u8>(holes[2] & 3u);
-    out[count].suited = (holes[2] & 3u) == (holes[4] & 3u);
-    ++count;
-  }
-  {
-    const numbers::u32 key = r3 * 13u + r4;
-    out[count].index = numbers::pair_layout[key];
-    out[count].mask = numbers::pair_mask[key];
-    out[count].suit = static_cast<numbers::u8>(holes[3] & 3u);
-    out[count].suited = (holes[3] & 3u) == (holes[4] & 3u);
-    ++count;
-  }
-  return count;
-}
-
-// 4 hole cards: 6 rank pairs, written out because the triangular
-// loop is not unrolled by the compiler and costs about twice as much.
-inline unsigned omaha_pairs_4(const card* holes, Group* out) noexcept {
-  unsigned count = 0;
-  const unsigned r0 = holes[0] >> 2;
-  const unsigned r1 = holes[1] >> 2;
-  const unsigned r2 = holes[2] >> 2;
-  const unsigned r3 = holes[3] >> 2;
-  {
-    const numbers::u32 key = r0 * 13u + r1;
-    out[count].index = numbers::pair_layout[key];
-    out[count].mask = numbers::pair_mask[key];
-    out[count].suit = static_cast<numbers::u8>(holes[0] & 3u);
-    out[count].suited = (holes[0] & 3u) == (holes[1] & 3u);
-    ++count;
-  }
-  {
-    const numbers::u32 key = r0 * 13u + r2;
-    out[count].index = numbers::pair_layout[key];
-    out[count].mask = numbers::pair_mask[key];
-    out[count].suit = static_cast<numbers::u8>(holes[0] & 3u);
-    out[count].suited = (holes[0] & 3u) == (holes[2] & 3u);
-    ++count;
-  }
-  {
-    const numbers::u32 key = r0 * 13u + r3;
-    out[count].index = numbers::pair_layout[key];
-    out[count].mask = numbers::pair_mask[key];
-    out[count].suit = static_cast<numbers::u8>(holes[0] & 3u);
-    out[count].suited = (holes[0] & 3u) == (holes[3] & 3u);
-    ++count;
-  }
-  {
-    const numbers::u32 key = r1 * 13u + r2;
-    out[count].index = numbers::pair_layout[key];
-    out[count].mask = numbers::pair_mask[key];
-    out[count].suit = static_cast<numbers::u8>(holes[1] & 3u);
-    out[count].suited = (holes[1] & 3u) == (holes[2] & 3u);
-    ++count;
-  }
-  {
-    const numbers::u32 key = r1 * 13u + r3;
-    out[count].index = numbers::pair_layout[key];
-    out[count].mask = numbers::pair_mask[key];
-    out[count].suit = static_cast<numbers::u8>(holes[1] & 3u);
-    out[count].suited = (holes[1] & 3u) == (holes[3] & 3u);
-    ++count;
-  }
-  {
-    const numbers::u32 key = r2 * 13u + r3;
-    out[count].index = numbers::pair_layout[key];
-    out[count].mask = numbers::pair_mask[key];
-    out[count].suit = static_cast<numbers::u8>(holes[2] & 3u);
-    out[count].suited = (holes[2] & 3u) == (holes[3] & 3u);
-    ++count;
-  }
-  return count;
-}
-
-// Hand sizes that have a written-out builder use it; the rest share the loop.
-inline unsigned omaha_pairs_flat(const card* holes, std::size_t nh, Group* out) noexcept {
-  switch (nh) {
-    case 6: return omaha_pairs_6(holes, out);
-    case 5: return omaha_pairs_5(holes, out);
-    case 4: return omaha_pairs_4(holes, out);
-    default: return omaha_pairs(holes, nh, out);
-  }
-}
-
-inline unsigned omaha_triples(const card* board, std::size_t nb, Group* out) noexcept {
   unsigned count = 0;
   for (std::size_t i = 0; i < nb; ++i)
-    for (std::size_t j = i + 1; j < nb; ++j)
-      for (std::size_t k = j + 1; k < nb; ++k) {
-        const auto key = static_cast<std::size_t>(((board[i] >> 2) * 13 + (board[j] >> 2)) * 13 + (board[k] >> 2));
-        out[count++] = {numbers::triple_codes_by_rank[key], numbers::triple_mask_by_rank[key],
-          static_cast<numbers::u8>(board[i] & 3u),
-          (board[i] & 3u) == (board[j] & 3u) && (board[i] & 3u) == (board[k] & 3u)};
-      }
-  return count;
-}
-
-// 5 board cards: 10 rank triples. The two-multiply key chain is
-// broken up by recycling each pair key, so a triple is one add from it.
-inline unsigned omaha_triples_5(const card* board, Group* out) noexcept {
-  unsigned count = 0;
-  const unsigned r0 = board[0] >> 2;
-  const unsigned r1 = board[1] >> 2;
-  const unsigned r2 = board[2] >> 2;
-  const unsigned r3 = board[3] >> 2;
-  const unsigned r4 = board[4] >> 2;
-  const numbers::u32 base01 = 13u * (r0 * 13u + r1);
-  const numbers::u32 base02 = 13u * (r0 * 13u + r2);
-  const numbers::u32 base03 = 13u * (r0 * 13u + r3);
-  const numbers::u32 base04 = 13u * (r0 * 13u + r4);
-  const numbers::u32 base12 = 13u * (r1 * 13u + r2);
-  const numbers::u32 base13 = 13u * (r1 * 13u + r3);
-  const numbers::u32 base14 = 13u * (r1 * 13u + r4);
-  const numbers::u32 base23 = 13u * (r2 * 13u + r3);
-  const numbers::u32 base24 = 13u * (r2 * 13u + r4);
-  const numbers::u32 base34 = 13u * (r3 * 13u + r4);
-  {
-    const numbers::u32 key = base01 + r2;
-    out[count].index = numbers::triple_codes_by_rank[key];
-    out[count].mask = numbers::triple_mask_by_rank[key];
-    out[count].suit = static_cast<numbers::u8>(board[0] & 3u);
-    out[count].suited = (board[0] & 3u) == (board[1] & 3u) &&
-      (board[0] & 3u) == (board[2] & 3u);
-    ++count;
-  }
-  {
-    const numbers::u32 key = base01 + r3;
-    out[count].index = numbers::triple_codes_by_rank[key];
-    out[count].mask = numbers::triple_mask_by_rank[key];
-    out[count].suit = static_cast<numbers::u8>(board[0] & 3u);
-    out[count].suited = (board[0] & 3u) == (board[1] & 3u) &&
-      (board[0] & 3u) == (board[3] & 3u);
-    ++count;
-  }
-  {
-    const numbers::u32 key = base01 + r4;
-    out[count].index = numbers::triple_codes_by_rank[key];
-    out[count].mask = numbers::triple_mask_by_rank[key];
-    out[count].suit = static_cast<numbers::u8>(board[0] & 3u);
-    out[count].suited = (board[0] & 3u) == (board[1] & 3u) &&
-      (board[0] & 3u) == (board[4] & 3u);
-    ++count;
-  }
-  {
-    const numbers::u32 key = base02 + r3;
-    out[count].index = numbers::triple_codes_by_rank[key];
-    out[count].mask = numbers::triple_mask_by_rank[key];
-    out[count].suit = static_cast<numbers::u8>(board[0] & 3u);
-    out[count].suited = (board[0] & 3u) == (board[2] & 3u) &&
-      (board[0] & 3u) == (board[3] & 3u);
-    ++count;
-  }
-  {
-    const numbers::u32 key = base02 + r4;
-    out[count].index = numbers::triple_codes_by_rank[key];
-    out[count].mask = numbers::triple_mask_by_rank[key];
-    out[count].suit = static_cast<numbers::u8>(board[0] & 3u);
-    out[count].suited = (board[0] & 3u) == (board[2] & 3u) &&
-      (board[0] & 3u) == (board[4] & 3u);
-    ++count;
-  }
-  {
-    const numbers::u32 key = base03 + r4;
-    out[count].index = numbers::triple_codes_by_rank[key];
-    out[count].mask = numbers::triple_mask_by_rank[key];
-    out[count].suit = static_cast<numbers::u8>(board[0] & 3u);
-    out[count].suited = (board[0] & 3u) == (board[3] & 3u) &&
-      (board[0] & 3u) == (board[4] & 3u);
-    ++count;
-  }
-  {
-    const numbers::u32 key = base12 + r3;
-    out[count].index = numbers::triple_codes_by_rank[key];
-    out[count].mask = numbers::triple_mask_by_rank[key];
-    out[count].suit = static_cast<numbers::u8>(board[1] & 3u);
-    out[count].suited = (board[1] & 3u) == (board[2] & 3u) &&
-      (board[1] & 3u) == (board[3] & 3u);
-    ++count;
-  }
-  {
-    const numbers::u32 key = base12 + r4;
-    out[count].index = numbers::triple_codes_by_rank[key];
-    out[count].mask = numbers::triple_mask_by_rank[key];
-    out[count].suit = static_cast<numbers::u8>(board[1] & 3u);
-    out[count].suited = (board[1] & 3u) == (board[2] & 3u) &&
-      (board[1] & 3u) == (board[4] & 3u);
-    ++count;
-  }
-  {
-    const numbers::u32 key = base13 + r4;
-    out[count].index = numbers::triple_codes_by_rank[key];
-    out[count].mask = numbers::triple_mask_by_rank[key];
-    out[count].suit = static_cast<numbers::u8>(board[1] & 3u);
-    out[count].suited = (board[1] & 3u) == (board[3] & 3u) &&
-      (board[1] & 3u) == (board[4] & 3u);
-    ++count;
-  }
-  {
-    const numbers::u32 key = base23 + r4;
-    out[count].index = numbers::triple_codes_by_rank[key];
-    out[count].mask = numbers::triple_mask_by_rank[key];
-    out[count].suit = static_cast<numbers::u8>(board[2] & 3u);
-    out[count].suited = (board[2] & 3u) == (board[3] & 3u) &&
-      (board[2] & 3u) == (board[4] & 3u);
-    ++count;
-  }
-  return count;
-}
-
-// 4 board cards: 4 rank triples. The two-multiply key chain is
-// broken up by recycling each pair key, so a triple is one add from it.
-inline unsigned omaha_triples_4(const card* board, Group* out) noexcept {
-  unsigned count = 0;
-  const unsigned r0 = board[0] >> 2;
-  const unsigned r1 = board[1] >> 2;
-  const unsigned r2 = board[2] >> 2;
-  const unsigned r3 = board[3] >> 2;
-  const numbers::u32 base01 = 13u * (r0 * 13u + r1);
-  const numbers::u32 base02 = 13u * (r0 * 13u + r2);
-  const numbers::u32 base03 = 13u * (r0 * 13u + r3);
-  const numbers::u32 base12 = 13u * (r1 * 13u + r2);
-  const numbers::u32 base13 = 13u * (r1 * 13u + r3);
-  const numbers::u32 base23 = 13u * (r2 * 13u + r3);
-  {
-    const numbers::u32 key = base01 + r2;
-    out[count].index = numbers::triple_codes_by_rank[key];
-    out[count].mask = numbers::triple_mask_by_rank[key];
-    out[count].suit = static_cast<numbers::u8>(board[0] & 3u);
-    out[count].suited = (board[0] & 3u) == (board[1] & 3u) &&
-      (board[0] & 3u) == (board[2] & 3u);
-    ++count;
-  }
-  {
-    const numbers::u32 key = base01 + r3;
-    out[count].index = numbers::triple_codes_by_rank[key];
-    out[count].mask = numbers::triple_mask_by_rank[key];
-    out[count].suit = static_cast<numbers::u8>(board[0] & 3u);
-    out[count].suited = (board[0] & 3u) == (board[1] & 3u) &&
-      (board[0] & 3u) == (board[3] & 3u);
-    ++count;
-  }
-  {
-    const numbers::u32 key = base02 + r3;
-    out[count].index = numbers::triple_codes_by_rank[key];
-    out[count].mask = numbers::triple_mask_by_rank[key];
-    out[count].suit = static_cast<numbers::u8>(board[0] & 3u);
-    out[count].suited = (board[0] & 3u) == (board[2] & 3u) &&
-      (board[0] & 3u) == (board[3] & 3u);
-    ++count;
-  }
-  {
-    const numbers::u32 key = base12 + r3;
-    out[count].index = numbers::triple_codes_by_rank[key];
-    out[count].mask = numbers::triple_mask_by_rank[key];
-    out[count].suit = static_cast<numbers::u8>(board[1] & 3u);
-    out[count].suited = (board[1] & 3u) == (board[2] & 3u) &&
-      (board[1] & 3u) == (board[3] & 3u);
-    ++count;
-  }
-  return count;
-}
-
-// 3 board cards: 1 rank triples. The two-multiply key chain is
-// broken up by recycling each pair key, so a triple is one add from it.
-inline unsigned omaha_triples_3(const card* board, Group* out) noexcept {
-  unsigned count = 0;
-  const unsigned r0 = board[0] >> 2;
-  const unsigned r1 = board[1] >> 2;
-  const unsigned r2 = board[2] >> 2;
-  const numbers::u32 base01 = 13u * (r0 * 13u + r1);
-  const numbers::u32 base02 = 13u * (r0 * 13u + r2);
-  const numbers::u32 base12 = 13u * (r1 * 13u + r2);
-  {
-    const numbers::u32 key = base01 + r2;
-    out[count].index = numbers::triple_codes_by_rank[key];
-    out[count].mask = numbers::triple_mask_by_rank[key];
-    out[count].suit = static_cast<numbers::u8>(board[0] & 3u);
-    out[count].suited = (board[0] & 3u) == (board[1] & 3u) &&
-      (board[0] & 3u) == (board[2] & 3u);
-    ++count;
-  }
-  return count;
-}
-
-// Board sizes that have a written-out builder use it; the rest share the loop.
-inline unsigned omaha_triples_flat(const card* board, std::size_t nb, Group* out) noexcept {
-  switch (nb) {
-    case 5: return omaha_triples_5(board, out);
-    case 4: return omaha_triples_4(board, out);
-    case 3: return omaha_triples_3(board, out);
-    default: return omaha_triples(board, nb, out);
-  }
-}
-
-// Two holes plus three board cards: the rank is one table lookup per
-// combination, and a combination that is all one suit is a flush or straight
-// flush, which always outranks the stored value.
-// Plain minimum over a fixed number of triples: the offsets are hoisted out of
-// the pair loop by the unroller.
-template <unsigned Triples>
-inline rank sweep_fixed(const Group* pairs, unsigned pair_count, const Group* triples, rank best) noexcept {
-  numbers::u32 offsets[Triples];
-  for (unsigned t = 0; t < Triples; ++t) offsets[t] = triples[t].index;
-  for (unsigned p = 0; p < pair_count; ++p) {
-    const numbers::u32 base = pairs[p].index;
-    for (unsigned t = 0; t < Triples; ++t) {
-      const rank value = numbers::omaha_table[base + offsets[t]];
-      if (value < best) best = value;
+    for (std::size_t j = i + 1; j < nb; ++j) {
+      const unsigned base = 13u * ((board[i] >> 2) * 13u + (board[j] >> 2));
+      for (std::size_t k = j + 1; k < nb; ++k)
+        out[count++] = numbers::triple_codes_by_rank[base + (board[k] >> 2)];
     }
-  }
-  return best;
+  return count;
 }
 
-// Wide boards: with ten board triples only about one combination in sixteen
-// can be suited, so the plain minimum is taken for every combination first and
-// the suited ones are collected into short lists afterwards. Four accumulator
-// chains keep that minimum from being one long dependency chain.
+// Cards of each suit, one byte lane per suit. At most eight cards go in, so no
+// lane can carry into the next.
+inline numbers::u32 suit_lanes(const card* cards, std::size_t count) noexcept {
+  numbers::u32 lanes = 0;
+  for (std::size_t i = 0; i < count; ++i) lanes += numbers::u32{1} << (8u * (cards[i] & 3u));
+  return lanes;
+}
+// Suits holding at least two hole cards and three board cards, as bit 5 of the
+// suit's lane. Adding 30 to a hole lane sets bit 5 exactly when it holds two or
+// more; adding 29 to a board lane, when it holds three or more. Lanes hold at
+// most eight, so neither sum reaches the next lane.
+inline numbers::u32 flushable_suits(numbers::u32 hole_lanes, numbers::u32 board_lanes) noexcept {
+  return (hole_lanes + 0x1E1E1E1Eu) & (board_lanes + 0x1D1D1D1Du) & 0x20202020u;
+}
+
+// Minimum unsuited rank over every pair and triple. With a compile-time triple
+// count the inner loop unrolls and the codes stay in registers; four
+// accumulators keep the minimum from being one dependency chain through every
+// load.
 template <unsigned Triples>
-inline rank sweep_accumulate(const Group* pairs, unsigned pair_count, const Group* triples) noexcept {
+inline rank sweep_fixed(const numbers::u32* pairs, unsigned pair_count,
+                        const numbers::u16* triples) noexcept {
   numbers::u32 offsets[Triples];
-  for (unsigned t = 0; t < Triples; ++t) offsets[t] = triples[t].index;
+  for (unsigned t = 0; t < Triples; ++t) offsets[t] = triples[t];
   rank acc[4] = {7462, 7462, 7462, 7462};
   for (unsigned p = 0; p < pair_count; ++p) {
-    const numbers::u32 base = pairs[p].index;
-    unsigned t = 0;
-    for (; t + 1 < Triples; t += 2) {
-      acc[0] = std::min(acc[0], numbers::omaha_table[base + offsets[t]]);
-      acc[1] = std::min(acc[1], numbers::omaha_table[base + offsets[t + 1]]);
-    }
-    if (t < Triples) acc[0] = std::min(acc[0], numbers::omaha_table[base + offsets[t]]);
+    const numbers::u32 base = pairs[p];
+    for (unsigned t = 0; t < Triples; ++t)
+      acc[t & 3u] = std::min(acc[t & 3u], numbers::omaha_table[base + offsets[t]]);
   }
   return std::min(std::min(acc[0], acc[1]), std::min(acc[2], acc[3]));
 }
-
-template <unsigned Triples>
-inline rank omaha_groups_wide(const Group* pairs, unsigned pair_count, const Group* triples) noexcept {
-  static_assert(Triples >= 4, "the wide path is for boards with many triples");
-  rank best = sweep_accumulate<Triples>(pairs, pair_count, triples);
-  if (best == 1) return best;
-  unsigned pair_at[max_omaha_groups * (max_omaha_groups - 1) / 2];
-  unsigned pair_suit[max_omaha_groups * (max_omaha_groups - 1) / 2];
-  unsigned suited_pairs = 0;
+inline rank sweep_any(const numbers::u32* pairs, unsigned pair_count, const numbers::u16* triples,
+                      unsigned triple_count) noexcept {
+  rank acc[2] = {7462, 7462};
   for (unsigned p = 0; p < pair_count; ++p) {
-    pair_at[suited_pairs] = p;
-    pair_suit[suited_pairs] = pairs[p].suit;
-    suited_pairs += static_cast<unsigned>(pairs[p].suited);
+    const numbers::u32 base = pairs[p];
+    unsigned t = 0;
+    for (; t + 1 < triple_count; t += 2) {
+      acc[0] = std::min(acc[0], numbers::omaha_table[base + triples[t]]);
+      acc[1] = std::min(acc[1], numbers::omaha_table[base + triples[t + 1]]);
+    }
+    if (t < triple_count) acc[0] = std::min(acc[0], numbers::omaha_table[base + triples[t]]);
   }
-  unsigned triple_at[Triples];
-  unsigned triple_suit[Triples];
-  unsigned suited_triples = 0;
-  for (unsigned t = 0; t < Triples; ++t) {
-    triple_at[suited_triples] = t;
-    triple_suit[suited_triples] = triples[t].suit;
-    suited_triples += static_cast<unsigned>(triples[t].suited);
+  return std::min(acc[0], acc[1]);
+}
+inline rank omaha_sweep(const numbers::u32* pairs, unsigned pair_count, const numbers::u16* triples,
+                        unsigned triple_count) noexcept {
+  switch (triple_count) {
+    case 10: return sweep_fixed<10>(pairs, pair_count, triples);
+    case 4: return sweep_fixed<4>(pairs, pair_count, triples);
+    case 1: return sweep_fixed<1>(pairs, pair_count, triples);
+    default: return sweep_any(pairs, pair_count, triples, triple_count);
   }
-  for (unsigned i = 0; i < suited_pairs; ++i)
-    for (unsigned j = 0; j < suited_triples; ++j)
-      if (pair_suit[i] == triple_suit[j]) {
-        const rank value = numbers::suited_rank(
-          static_cast<numbers::u16>(pairs[pair_at[i]].mask | triples[triple_at[j]].mask));
-        if (value < best) {
-          best = value;
-          if (best == 1) return best;
-        }
+}
+
+// Five distinct ranks of one suit: a straight flush when they run, else a flush.
+inline rank suited_five_rank(numbers::u16 mask) noexcept {
+  const numbers::u16 top = numbers::straight_top(mask);
+  return top != 0xffff ? numbers::straight_flush_rank(top) : numbers::flush_rank(mask);
+}
+
+// Best flush or straight flush from two hole cards and three board cards of one
+// suit, over the suits `flushable` marks. Two hole cards and three board cards
+// of one suit are five distinct ranks, so the flush table takes their mask as
+// it is. The usual case, exactly two and three, is one lookup; more cards of
+// the suit enumerate the subsets. Out of line: about one hand in fourteen gets
+// here, and the loops would otherwise sit inside every batch loop.
+POKER_NOINLINE inline rank omaha_flush_best(const card* holes, std::size_t nh, const card* board,
+                                            std::size_t nb, numbers::u32 flushable) noexcept {
+  rank best = 7462;
+  for (unsigned suit = 0; suit < 4; ++suit) {
+    if (!((flushable >> (8u * suit + 5u)) & 1u)) continue;
+    // Ranks of the suit's cards, without a branch per card. Sixty-four bits keep
+    // the shift defined for any card byte.
+    std::uint64_t hole_mask = 0, board_mask = 0;
+    for (std::size_t i = 0; i < nh; ++i)
+      hole_mask |= static_cast<std::uint64_t>((holes[i] & 3u) == suit) << (holes[i] >> 2);
+    for (std::size_t i = 0; i < nb; ++i)
+      board_mask |= static_cast<std::uint64_t>((board[i] & 3u) == suit) << (board[i] >> 2);
+    if (std::popcount(hole_mask) == 2 && std::popcount(board_mask) == 3) {
+      best = std::min(best, suited_five_rank(static_cast<numbers::u16>(hole_mask | board_mask)));
+      continue;
+    }
+    numbers::u16 hole_bits[max_omaha_groups];
+    unsigned hole_count = 0;
+    for (std::uint64_t m = hole_mask; m; m &= m - 1)
+      hole_bits[hole_count++] = static_cast<numbers::u16>(m & (0 - m));
+    numbers::u16 board_bits[max_omaha_groups];
+    unsigned board_count = 0;
+    for (std::uint64_t m = board_mask; m; m &= m - 1)
+      board_bits[board_count++] = static_cast<numbers::u16>(m & (0 - m));
+    for (unsigned a = 0; a < hole_count; ++a)
+      for (unsigned b = a + 1; b < hole_count; ++b) {
+        const numbers::u16 pair = static_cast<numbers::u16>(hole_bits[a] | hole_bits[b]);
+        for (unsigned x = 0; x < board_count; ++x)
+          for (unsigned y = x + 1; y < board_count; ++y)
+            for (unsigned z = y + 1; z < board_count; ++z)
+              best = std::min(best, suited_five_rank(static_cast<numbers::u16>(
+                                        pair | board_bits[x] | board_bits[y] | board_bits[z])));
       }
+  }
   return best;
 }
 
-inline rank omaha_groups(const Group* pairs, unsigned pair_count, const Group* triples, unsigned triple_count) noexcept {
-  rank best = 7462;
-  bool any_suited_pair = false;
-  for (unsigned p = 0; p < pair_count; ++p)
-    if (pairs[p].suited) any_suited_pair = true;
-  bool any_suited_triple = false;
-  for (unsigned t = 0; t < triple_count; ++t)
-    if (triples[t].suited) any_suited_triple = true;
-  if (!any_suited_pair || !any_suited_triple) {
-    // No combination can be suited, so every worth is a plain table entry. With
-    // a compile-time triple count the inner loop unrolls and the triple offsets
-    // stay in registers.
-    switch (triple_count) {
-      case 10: return sweep_fixed<10>(pairs, pair_count, triples, best);
-      case 4: return sweep_fixed<4>(pairs, pair_count, triples, best);
-      case 1: return sweep_fixed<1>(pairs, pair_count, triples, best);
-      default: break;
-    }
-    for (unsigned p = 0; p < pair_count; ++p) {
-      const numbers::u32 base = pairs[p].index;
-      for (unsigned t = 0; t < triple_count; ++t) {
-        const rank value = numbers::omaha_table[base + triples[t].index];
-        if (value < best) best = value;
-      }
-    }
-    return best;
-  }
-  for (unsigned p = 0; p < pair_count; ++p) {
-    const Group& pair = pairs[p];
-    for (unsigned t = 0; t < triple_count; ++t) {
-      const Group& triple = triples[t];
-      rank value = numbers::omaha_table[pair.index + triple.index];
-      if (pair.suited && triple.suited && pair.suit == triple.suit)
-        value = numbers::suited_rank(static_cast<numbers::u16>(pair.mask | triple.mask));
-      if (value < best) best = value;
-      if (best == 1) return best;
-    }
-  }
-  return best;
+// Rank from prepared groups and the cards behind them. The sweep ranks every
+// combination as if unsuited; a suited combination is a flush or straight
+// flush, which beats the unsuited rank of the same five cards, so the minimum
+// with the flush path is exact. Hands that cannot make a flush, about thirteen
+// in fourteen, never leave the sweep.
+inline rank omaha_from_groups(const numbers::u32* pairs, unsigned pair_count, const numbers::u16* triples,
+                              unsigned triple_count, const card* holes, std::size_t nh, const card* board,
+                              std::size_t nb, numbers::u32 hole_lanes, numbers::u32 board_lanes) noexcept {
+  const rank plain = omaha_sweep(pairs, pair_count, triples, triple_count);
+  const numbers::u32 flushable = flushable_suits(hole_lanes, board_lanes);
+  if (!flushable) return plain;
+  return std::min(plain, omaha_flush_best(holes, nh, board, nb, flushable));
 }
 
 inline rank omaha(const card* holes, std::size_t nh, const card* board, std::size_t nb) noexcept {
@@ -1765,11 +1290,11 @@ inline rank omaha(const card* holes, std::size_t nh, const card* board, std::siz
             }
     return best;
   }
-  Group pairs[max_omaha_groups * (max_omaha_groups - 1) / 2];
-  Group triples[max_omaha_groups * (max_omaha_groups - 1) * (max_omaha_groups - 2) / 6];
-  const unsigned pair_count = omaha_pairs_flat(holes, nh, pairs);
-  const unsigned triple_count = omaha_triples_flat(board, nb, triples);
-  if (triple_count == 10) return omaha_groups_wide<10>(pairs, pair_count, triples);
-  return omaha_groups(pairs, pair_count, triples, triple_count);
+  numbers::u32 pairs[max_omaha_pairs];
+  numbers::u16 triples[max_omaha_triples];
+  const unsigned pair_count = omaha_pair_offsets(holes, nh, pairs);
+  const unsigned triple_count = omaha_triple_codes(board, nb, triples);
+  return omaha_from_groups(pairs, pair_count, triples, triple_count, holes, nh, board, nb,
+                           suit_lanes(holes, nh), suit_lanes(board, nb));
 }
 } // namespace poker::detail
